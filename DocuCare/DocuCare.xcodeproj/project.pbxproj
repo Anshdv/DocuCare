@@ -1,0 +1,580 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		5A3E3C852E4E68DF004DAC68 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5A3E3C6D2E4E68DA004DAC68 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A3E3C742E4E68DA004DAC68;
+			remoteInfo = DocuCare;
+		};
+		5A3E3C8F2E4E68DF004DAC68 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5A3E3C6D2E4E68DA004DAC68 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A3E3C742E4E68DA004DAC68;
+			remoteInfo = DocuCare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		5A3E3C752E4E68DA004DAC68 /* DocuCare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DocuCare.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A3E3C842E4E68DF004DAC68 /* DocuCareTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocuCareTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A3E3C8E2E4E68DF004DAC68 /* DocuCareUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocuCareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5A3E3CC42E4E7F82004DAC68 /* Exceptions for "DocuCare" folder in "DocuCare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5A3E3C742E4E68DA004DAC68 /* DocuCare */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5A3E3C772E4E68DA004DAC68 /* DocuCare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5A3E3CC42E4E7F82004DAC68 /* Exceptions for "DocuCare" folder in "DocuCare" target */,
+			);
+			path = DocuCare;
+			sourceTree = "<group>";
+		};
+		5A3E3C872E4E68DF004DAC68 /* DocuCareTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DocuCareTests;
+			sourceTree = "<group>";
+		};
+		5A3E3C912E4E68DF004DAC68 /* DocuCareUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DocuCareUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5A3E3C722E4E68DA004DAC68 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A3E3C812E4E68DF004DAC68 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A3E3C8B2E4E68DF004DAC68 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5A3E3C6C2E4E68DA004DAC68 = {
+			isa = PBXGroup;
+			children = (
+				5A3E3C772E4E68DA004DAC68 /* DocuCare */,
+				5A3E3C872E4E68DF004DAC68 /* DocuCareTests */,
+				5A3E3C912E4E68DF004DAC68 /* DocuCareUITests */,
+				5A3E3C762E4E68DA004DAC68 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5A3E3C762E4E68DA004DAC68 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5A3E3C752E4E68DA004DAC68 /* DocuCare.app */,
+				5A3E3C842E4E68DF004DAC68 /* DocuCareTests.xctest */,
+				5A3E3C8E2E4E68DF004DAC68 /* DocuCareUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5A3E3C742E4E68DA004DAC68 /* DocuCare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A3E3C982E4E68DF004DAC68 /* Build configuration list for PBXNativeTarget "DocuCare" */;
+			buildPhases = (
+				5A3E3C712E4E68DA004DAC68 /* Sources */,
+				5A3E3C722E4E68DA004DAC68 /* Frameworks */,
+				5A3E3C732E4E68DA004DAC68 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5A3E3C772E4E68DA004DAC68 /* DocuCare */,
+			);
+			name = DocuCare;
+			packageProductDependencies = (
+			);
+			productName = DocuCare;
+			productReference = 5A3E3C752E4E68DA004DAC68 /* DocuCare.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5A3E3C832E4E68DF004DAC68 /* DocuCareTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A3E3C9B2E4E68DF004DAC68 /* Build configuration list for PBXNativeTarget "DocuCareTests" */;
+			buildPhases = (
+				5A3E3C802E4E68DF004DAC68 /* Sources */,
+				5A3E3C812E4E68DF004DAC68 /* Frameworks */,
+				5A3E3C822E4E68DF004DAC68 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5A3E3C862E4E68DF004DAC68 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5A3E3C872E4E68DF004DAC68 /* DocuCareTests */,
+			);
+			name = DocuCareTests;
+			packageProductDependencies = (
+			);
+			productName = DocuCareTests;
+			productReference = 5A3E3C842E4E68DF004DAC68 /* DocuCareTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		5A3E3C8D2E4E68DF004DAC68 /* DocuCareUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A3E3C9E2E4E68DF004DAC68 /* Build configuration list for PBXNativeTarget "DocuCareUITests" */;
+			buildPhases = (
+				5A3E3C8A2E4E68DF004DAC68 /* Sources */,
+				5A3E3C8B2E4E68DF004DAC68 /* Frameworks */,
+				5A3E3C8C2E4E68DF004DAC68 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5A3E3C902E4E68DF004DAC68 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				5A3E3C912E4E68DF004DAC68 /* DocuCareUITests */,
+			);
+			name = DocuCareUITests;
+			packageProductDependencies = (
+			);
+			productName = DocuCareUITests;
+			productReference = 5A3E3C8E2E4E68DF004DAC68 /* DocuCareUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5A3E3C6D2E4E68DA004DAC68 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					5A3E3C742E4E68DA004DAC68 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					5A3E3C832E4E68DF004DAC68 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 5A3E3C742E4E68DA004DAC68;
+					};
+					5A3E3C8D2E4E68DF004DAC68 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 5A3E3C742E4E68DA004DAC68;
+					};
+				};
+			};
+			buildConfigurationList = 5A3E3C702E4E68DA004DAC68 /* Build configuration list for PBXProject "DocuCare" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5A3E3C6C2E4E68DA004DAC68;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5A3E3C762E4E68DA004DAC68 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5A3E3C742E4E68DA004DAC68 /* DocuCare */,
+				5A3E3C832E4E68DF004DAC68 /* DocuCareTests */,
+				5A3E3C8D2E4E68DF004DAC68 /* DocuCareUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5A3E3C732E4E68DA004DAC68 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A3E3C822E4E68DF004DAC68 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A3E3C8C2E4E68DF004DAC68 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5A3E3C712E4E68DA004DAC68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A3E3C802E4E68DF004DAC68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A3E3C8A2E4E68DF004DAC68 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5A3E3C862E4E68DF004DAC68 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A3E3C742E4E68DA004DAC68 /* DocuCare */;
+			targetProxy = 5A3E3C852E4E68DF004DAC68 /* PBXContainerItemProxy */;
+		};
+		5A3E3C902E4E68DF004DAC68 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A3E3C742E4E68DA004DAC68 /* DocuCare */;
+			targetProxy = 5A3E3C8F2E4E68DF004DAC68 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5A3E3C962E4E68DF004DAC68 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5A3E3C972E4E68DF004DAC68 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5A3E3C992E4E68DF004DAC68 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DocuCare/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "$(PRODUCT_NAME) use the camera to scan documents";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "$(PRODUCT_NAME) uses FaceID to unlock the app";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ansh.DocuCare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5A3E3C9A2E4E68DF004DAC68 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DocuCare/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "$(PRODUCT_NAME) use the camera to scan documents";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "$(PRODUCT_NAME) uses FaceID to unlock the app";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ansh.DocuCare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5A3E3C9C2E4E68DF004DAC68 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ansh.DocuCareTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DocuCare.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DocuCare";
+			};
+			name = Debug;
+		};
+		5A3E3C9D2E4E68DF004DAC68 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ansh.DocuCareTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DocuCare.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DocuCare";
+			};
+			name = Release;
+		};
+		5A3E3C9F2E4E68DF004DAC68 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ansh.DocuCareUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = DocuCare;
+			};
+			name = Debug;
+		};
+		5A3E3CA02E4E68DF004DAC68 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VGG3M7MUYN;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.Ansh.DocuCareUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = DocuCare;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5A3E3C702E4E68DA004DAC68 /* Build configuration list for PBXProject "DocuCare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A3E3C962E4E68DF004DAC68 /* Debug */,
+				5A3E3C972E4E68DF004DAC68 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A3E3C982E4E68DF004DAC68 /* Build configuration list for PBXNativeTarget "DocuCare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A3E3C992E4E68DF004DAC68 /* Debug */,
+				5A3E3C9A2E4E68DF004DAC68 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A3E3C9B2E4E68DF004DAC68 /* Build configuration list for PBXNativeTarget "DocuCareTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A3E3C9C2E4E68DF004DAC68 /* Debug */,
+				5A3E3C9D2E4E68DF004DAC68 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A3E3C9E2E4E68DF004DAC68 /* Build configuration list for PBXNativeTarget "DocuCareUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A3E3C9F2E4E68DF004DAC68 /* Debug */,
+				5A3E3CA02E4E68DF004DAC68 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5A3E3C6D2E4E68DA004DAC68 /* Project object */;
+}
