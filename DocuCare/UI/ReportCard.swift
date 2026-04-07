@@ -26,6 +26,8 @@ struct ReportCard: View {
                 Text(summary)
                     .font(.body)
                     .lineLimit(3)
+                    .lineSpacing(4)
+                    .multilineTextAlignment(.leading)
                     .foregroundColor(.secondary)
             }
         }

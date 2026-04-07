@@ -39,3 +39,18 @@ final class MedicalReport {
         self.ownerEmail = ownerEmail
     }
 }
+
+// MARK: - AI-generated title rules
+
+enum ReportTitleRules {
+    /// Applied only to the first-line title from Gemini after a scan—not to user-edited titles in the UI.
+    static let maxWords = 3
+
+    static func clamp(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        let words = trimmed.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        if words.count <= maxWords { return trimmed }
+        return words.prefix(maxWords).joined(separator: " ")
+    }
+}

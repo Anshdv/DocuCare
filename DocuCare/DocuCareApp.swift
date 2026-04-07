@@ -11,19 +11,26 @@ struct MedicalSummaryApp: App {
         WindowGroup {
             ZStack {
                 if checkingBiometric {
-                    ProgressView("Authenticating…")
+                    ProgressView(L10n.string(.authenticating, languageCode: session.effectiveLanguageCode()))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color(.systemBackground))
                 } else if session.isLoggedIn {
-                    ContentView()
-                        .environmentObject(appLock)
-                        .environmentObject(session)
-                        .blur(radius: appLock.isLocked ? 12 : 0)
-
-                    if appLock.isLocked {
-                        LockView()
+                    if session.hasConsented {
+                        ContentView()
                             .environmentObject(appLock)
-                            .transition(.opacity)
+                            .environmentObject(session)
+                            .blur(radius: appLock.isLocked ? 12 : 0)
+
+                        if appLock.isLocked {
+                            LockView()
+                                .environmentObject(appLock)
+                                .environmentObject(session)
+                                .transition(.opacity)
+                        }
+                    } else {
+                        ConsentAndPrivacyView(languageCode: session.effectiveLanguageCode()) {
+                            session.recordConsent()
+                        }
                     }
                 } else {
                     LoginView()

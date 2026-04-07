@@ -17,14 +17,12 @@ struct ContentView: View {
     @EnvironmentObject private var appLock: AppLockManager
 
     @EnvironmentObject private var session: SessionManager
-    @Query private var reports: [MedicalReport]
+    @Query(sort: \MedicalReport.createdAt, order: .reverse) private var allReports: [MedicalReport]
 
-    init() {
-        let currentUser = SessionManager.shared.email.lowercased()
-        _reports = Query(
-            filter: #Predicate<MedicalReport> { $0.ownerEmail == currentUser },
-            sort: \.createdAt, order: .reverse
-        )
+    /// Filters in memory so account email changes (Profile) immediately affect the list.
+    private var reports: [MedicalReport] {
+        let owner = session.email.lowercased()
+        return allReports.filter { $0.ownerEmail == owner }
     }
 
     @State private var selectedReport: SelectedReport? = nil
@@ -45,16 +43,21 @@ struct ContentView: View {
 
     // --- More Menu ---
     @State private var showingImportMenu = false
+    @State private var showingProfile = false
 
     // --- SEARCH FEATURE ---
     @FocusState private var searchFieldFocused: Bool // For search bar dismissal
 
     @State private var searchText: String = ""
-    private let searchDateFormatter: DateFormatter = {
+
+    private var lang: String { session.preferredLanguageCode }
+
+    private func formatReportDate(_ date: Date) -> String {
         let df = DateFormatter()
-        df.dateStyle = .medium // e.g., "Oct 12, 2025"
-        return df
-    }()
+        df.dateStyle = .medium
+        df.locale = Locale(identifier: AppLanguage.localeIdentifier(from: lang))
+        return df.string(from: date)
+    }
 
     // --- SEARCH FEATURE: Filtered reports ---
     private var filteredReports: [MedicalReport] {
@@ -62,7 +65,7 @@ struct ContentView: View {
         guard !query.isEmpty else { return reports }
         return reports.filter { report in
             let titleMatch = report.title.range(of: query, options: .caseInsensitive) != nil
-            let dateString = searchDateFormatter.string(from: report.createdAt)
+            let dateString = formatReportDate(report.createdAt)
             let dateMatch = dateString.range(of: query, options: .caseInsensitive) != nil
             return titleMatch || dateMatch
         }
@@ -74,6 +77,10 @@ struct ContentView: View {
         let answer: String
     }
     
+    // --- Deletion Confirmation State ---
+    @State private var reportPendingDelete: MedicalReport?
+    @State private var showingDeleteConfirmation = false
+
     var body: some View {
         let mainContent = NavigationStack {
             ZStack(alignment: .bottom) {
@@ -84,7 +91,11 @@ struct ContentView: View {
                         ReportListSection(
                             filteredReports: filteredReports,
                             allReports: reports,
-                            onDelete: delete,
+                            languageCode: lang,
+                            onDelete: { report in
+                                reportPendingDelete = report
+                                showingDeleteConfirmation = true
+                            },
                             onOpen: { report in selectedReport = SelectedReport(id: report.id) }
                         )
                         
@@ -124,7 +135,7 @@ struct ContentView: View {
 
                 chatInputBar
             }
-            .navigationTitle("Reports")
+            .navigationTitle(L10n.string(.reports, languageCode: lang))
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -135,15 +146,25 @@ struct ContentView: View {
                     .disabled(isProcessing)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Log Out") {
-                        session.logOut()
+                    Button {
+                        showingProfile = true
+                    } label: {
+                        Image(systemName: "person.crop.circle")
                     }
+                    .accessibilityLabel(L10n.string(.profileTitle, languageCode: lang))
                 }
             }
         }
 
         mainContent
+            .sheet(isPresented: $showingProfile) {
+                NavigationStack {
+                    ProfileView()
+                }
+                .environmentObject(session)
+            }
             .applyImportConfirmationDialog(
+                languageCode: lang,
                 isPresented: $showingImportMenu,
                 onScan: { showingScanner = true },
                 onPhotos: { showingPhotoPicker = true },
@@ -152,8 +173,8 @@ struct ContentView: View {
             .applyScanSheet(isPresented: $showingScanner, onScan: handleScan, onCancel: { showingScanner = false }, onFailure: { err in errorMessage = err.localizedDescription })
             .applyPhotosPicker(isPresented: $showingPhotoPicker, photoPickerItems: $photoPickerItems)
             .applyFilePickerSheet(isPresented: $showingFilePicker, onPick: handlePickedFiles)
-            .applyProcessingOverlay(isProcessing: isProcessing)
-            .applyErrorAlert(errorMessage: $errorMessage)
+            .applyProcessingOverlay(isProcessing: isProcessing, languageCode: lang)
+            .applyErrorAlert(errorMessage: $errorMessage, languageCode: lang)
             .applyDetailSheet(selectedReport: $selectedReport)
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .background { appLock.lock() }
@@ -161,6 +182,24 @@ struct ContentView: View {
             .onChange(of: photoPickerItems) { _, newItems in
                 loadPickedPhotos(newItems)
             }
+            // --- ALERT for Swipe-to-Delete ---
+            .alert(L10n.string(.deleteReportTitle, languageCode: lang),
+                   isPresented: $showingDeleteConfirmation,
+                   actions: {
+                       Button(L10n.string(.delete, languageCode: lang), role: .destructive) {
+                           if let report = reportPendingDelete {
+                               actuallyDelete(report)
+                           }
+                           reportPendingDelete = nil
+                       }
+                       Button(L10n.string(.cancel, languageCode: lang), role: .cancel) {
+                           reportPendingDelete = nil
+                       }
+                   },
+                   message: {
+                       Text(L10n.string(.deleteReportMessage, languageCode: lang))
+                   }
+            )
     }
 
     // MARK: - Extracted UI Sections
@@ -170,7 +209,7 @@ struct ContentView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            TextField("Search by title or date", text: $searchText)
+            TextField(L10n.string(.searchPlaceholder, languageCode: lang), text: $searchText)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .focused($searchFieldFocused)
@@ -190,7 +229,7 @@ struct ContentView: View {
             Button {
                 showingScanner = true
             } label: {
-                Label("Scan a medical report or image", systemImage: "camera.viewfinder")
+                Label(L10n.string(.scanMedicalReport, languageCode: lang), systemImage: "camera.viewfinder")
                     .font(.system(size: 18))
                     .padding(.horizontal, 15)
             }
@@ -240,7 +279,7 @@ struct ContentView: View {
     @ViewBuilder
     private var chatInputBar: some View {
         HStack(spacing: 8) {
-            TextField("Ask a question…", text: $inputText, axis: .vertical)
+            TextField(L10n.string(.askQuestion, languageCode: lang), text: $inputText, axis: .vertical)
                 .focused($inputIsFocused)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 18)
@@ -287,7 +326,7 @@ struct ContentView: View {
             }
             isProcessing = false
             if images.isEmpty {
-                errorMessage = "Failed to load images from selection."
+                errorMessage = L10n.string(.failedLoadImages, languageCode: lang)
             } else {
                 pendingScanImages = images
                 processScan()
@@ -322,7 +361,7 @@ struct ContentView: View {
             }
             isProcessing = false
             if images.isEmpty {
-                errorMessage = "No supported images or PDFs found in selected files."
+                errorMessage = L10n.string(.noSupportedFiles, languageCode: lang)
             } else {
                 pendingScanImages = images
                 processScan()
@@ -343,18 +382,14 @@ struct ContentView: View {
         Task {
             do {
                 let client = try GeminiClient(model: "gemini-2.0-flash")
-                let questionPrompt = """
-                You are a helpful, concise, and patient-friendly AI assistant for medical queries.
-                Answer the user's prompt clearly and simply (avoiding going beyond 150 words), avoiding jargon if possible, and provide brief explanations when needed.
-                Do not provide prescriptive or personalized medical advice or diagnoses. Do not use asterisks (*); use new lines to separate ideas.
-                """
+                let questionPrompt = GeminiPrompts.chatAssistantPrompt(appLanguageCode: lang)
 
                 let answer = try await client.AI_Response(text: currentQuestion, prompt: questionPrompt)
 
                 guard !answer.isEmpty else { throw GeminiClient.ClientError.emptyOutput }
                 chatMessages.append(ChatMessage(question: currentQuestion, answer: answer))
             } catch {
-                chatMessages.append(ChatMessage(question: currentQuestion, answer: "Sorry, there was an error: \(error.localizedDescription)"))
+                chatMessages.append(ChatMessage(question: currentQuestion, answer: L10n.chatError(error, languageCode: lang)))
             }
             isSendingPrompt = false
         }
@@ -406,32 +441,27 @@ struct ContentView: View {
                 let (text, _) = try await TextRecognizer.recognizeText(from: redactedImages)
 
                 let client = try GeminiClient(model: "gemini-2.0-flash")
-                let clipped = text.prefix(25_000)
-                let summarizePrompt = """
-                At the top, provide a patient-friendly, concrete, and non-generic 2-3 word title summarizing the report (do not include generic terms like 'Medical Report' or 'Summary'). 
-                Then, after a blank line, provide a simple, concise, patient- and elderly-friendly summary in bullet points, with key findings and suggested diagnoses, 
-                minimizing technical or biological terms, and briefly explaining the effects of any abnormalities (75-100 words).
-                Separate each point on a new line; do not use any special symbol. Make the output 1.15 spaced. Do not use asterisks (*) anywhere in the output. 
-                Do not give prescriptive treatment advice.
-                """
+                let summarizePrompt = GeminiPrompts.summarizeMedicalReportPrompt(appLanguageCode: lang)
 
-                // Always send redacted images to the AI
+                // Always send redacted images to the AI (full OCR text—no client-side truncation; brevity is enforced in the prompt)
                 let imagesToSend: [UIImage]? = redactedImages
                 let aiOutput = try await client.AI_Response(
-                    text: String(clipped),
+                    text: text,
                     prompt: summarizePrompt,
-                    images: imagesToSend
+                    images: imagesToSend,
+                    maxOutputTokens: GeminiClient.summarizeOutputTokenCeiling
                 )
 
                 // ... rest unchanged ...
                 let lines = aiOutput.components(separatedBy: .newlines)
                 let titleIdx = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) ?? 0
-                let title = lines[titleIdx].trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawTitle = lines[titleIdx].trimmingCharacters(in: .whitespacesAndNewlines)
+                let title = ReportTitleRules.clamp(rawTitle)
                 let summaryStartIdx = lines[(titleIdx+1)...].firstIndex(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) ?? (titleIdx+1)
                 let summary = lines[summaryStartIdx...].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
 
                 let report = MedicalReport(
-                    title: title.isEmpty ? "Medical Report" : title,
+                    title: title.isEmpty ? L10n.string(.medicalReportFallback, languageCode: lang) : title,
                     ocrText: text,
                     summary: summary,
                     pdfData: pdf,
@@ -446,59 +476,10 @@ struct ContentView: View {
             isProcessing = false
         }
     }
-    
-    private var navigationBarItems: some ToolbarContent {
-        Group {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingImportMenu = true
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .disabled(isProcessing)
-            }
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Log Out") {
-                    session.logOut()
-                }
-            }
-        }
-    }
-
-    // MARK: - List Row
-
-    @ViewBuilder
-    private func reportRow(for report: MedicalReport) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(report.title)
-                    .font(.title2).bold()
-                HStack(spacing: 8) {
-                    Text(report.createdAt, style: .date)
-                    if report.pageCount > 0 {
-                        Text("• \(report.pageCount) page\(report.pageCount == 1 ? "" : "s")")
-                    }
-                }
-                .font(.title3)
-                .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button {
-                selectedReport = SelectedReport(id: report.id)
-            } label: {
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(Color.accentColor)
-                    .accessibilityLabel("Open Medical Summary")
-            }
-            .buttonStyle(.plain)
-        }
-        .contentShape(Rectangle())
-    }
 
     // MARK: - Actions
 
-    private func delete(_ report: MedicalReport) {
+    private func actuallyDelete(_ report: MedicalReport) {
         context.delete(report)
         try? context.save()
     }
@@ -507,7 +488,7 @@ struct ContentView: View {
         let firstLine = text
             .split(separator: "\n")
             .map { String($0).trimmingCharacters(in: .whitespaces) }
-            .first { !$0.isEmpty } ?? "Medical Report"
+            .first { !$0.isEmpty } ?? L10n.string(.medicalReportFallback, languageCode: lang)
         return String(firstLine.prefix(60))
     }
 }
@@ -553,18 +534,19 @@ private struct SelectedReport: Identifiable, Equatable {
 private struct ReportListSection: View {
     let filteredReports: [MedicalReport]
     let allReports: [MedicalReport]
+    let languageCode: String
     let onDelete: (MedicalReport) -> Void
     let onOpen: (MedicalReport) -> Void
 
     var body: some View {
         if filteredReports.isEmpty {
             ContentUnavailableView(
-                "No reports found",
+                L10n.string(.noReportsFound, languageCode: languageCode),
                 systemImage: "doc.text.magnifyingglass",
                 description: Text(
                     allReports.isEmpty
-                    ? "Scan a medical report to get started."
-                    : "Try a different search or scan a new report."
+                    ? L10n.string(.emptyScanPrompt, languageCode: languageCode)
+                    : L10n.string(.emptySearchPrompt, languageCode: languageCode)
                 ).font(.headline)
             )
             .padding(.top, 20)
@@ -586,7 +568,7 @@ private struct ReportListSection: View {
                             HStack(spacing: 8) {
                                 Text(report.createdAt, style: .date)
                                 if report.pageCount > 0 {
-                                    Text("• \(report.pageCount) page\(report.pageCount == 1 ? "" : "s")")
+                                    Text("• \(L10n.pageLabel(count: report.pageCount, languageCode: languageCode))")
                                 }
                             }
                             .font(.title3)
@@ -599,14 +581,14 @@ private struct ReportListSection: View {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.title2)
                                 .foregroundColor(Color.accentColor)
-                                .accessibilityLabel("Open Medical Summary")
+                                .accessibilityLabel(L10n.string(.openMedicalSummary, languageCode: languageCode))
                         }
                         .buttonStyle(.plain)
                     }
                     .contentShape(Rectangle())
                     .swipeActions {
                         Button(role: .destructive) { onDelete(report) } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label(L10n.string(.delete, languageCode: languageCode), systemImage: "trash")
                         }
                     }
                 }
@@ -627,20 +609,21 @@ private extension View {
     }
 
     func applyImportConfirmationDialog(
+        languageCode: String,
         isPresented: Binding<Bool>,
         onScan: @escaping () -> Void,
         onPhotos: @escaping () -> Void,
         onFiles: @escaping () -> Void
     ) -> some View {
         self.confirmationDialog(
-            "Import Report",
+            L10n.string(.importReport, languageCode: languageCode),
             isPresented: isPresented,
             titleVisibility: .visible
         ) {
-            Button("Take a picture", action: onScan)
-            Button("Upload from Photos", action: onPhotos)
-            Button("Upload from Files", action: onFiles)
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.string(.takePicture, languageCode: languageCode), action: onScan)
+            Button(L10n.string(.uploadPhotos, languageCode: languageCode), action: onPhotos)
+            Button(L10n.string(.uploadFiles, languageCode: languageCode), action: onFiles)
+            Button(L10n.string(.cancel, languageCode: languageCode), role: .cancel) {}
         }
     }
 
@@ -681,12 +664,12 @@ private extension View {
         }
     }
 
-    func applyProcessingOverlay(isProcessing: Bool) -> some View {
+    func applyProcessingOverlay(isProcessing: Bool, languageCode: String) -> some View {
         self.overlay {
             if isProcessing {
                 ZStack {
                     Color.black.opacity(0.2).ignoresSafeArea()
-                    ProgressView("Processing…")
+                    ProgressView(L10n.string(.processing, languageCode: languageCode))
                         .padding()
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
@@ -694,9 +677,9 @@ private extension View {
         }
     }
 
-    func applyErrorAlert(errorMessage: Binding<String?>) -> some View {
-        self.alert("Error", isPresented: .constant(errorMessage.wrappedValue != nil), actions: {
-            Button("OK") { errorMessage.wrappedValue = nil }
+    func applyErrorAlert(errorMessage: Binding<String?>, languageCode: String) -> some View {
+        self.alert(L10n.string(.error, languageCode: languageCode), isPresented: .constant(errorMessage.wrappedValue != nil), actions: {
+            Button(L10n.string(.ok, languageCode: languageCode)) { errorMessage.wrappedValue = nil }
         }, message: { Text(errorMessage.wrappedValue ?? "") })
     }
 
@@ -704,7 +687,10 @@ private extension View {
         selectedReport: Binding<SelectedReport?>
     ) -> some View {
         self.sheet(item: selectedReport) { selected in
-            ReportDetailView(reportID: selected.id)
+            NavigationStack {
+                ReportDetailView(reportID: selected.id)
+            }
+            .environmentObject(SessionManager.shared)
         }
     }
 }

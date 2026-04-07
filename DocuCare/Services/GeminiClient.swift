@@ -59,7 +59,7 @@ struct GeminiClient {
 
     enum ClientError: Error {
         case missingAPIKey
-        case invalidResponse
+        case invalidResponse(status: Int, body: String)
         case emptyOutput
     }
 
@@ -67,14 +67,18 @@ struct GeminiClient {
     let apiKey: String
     let model: String
 
+    /// High ceiling so the model is not cut off mid-summary (e.g. missing bullets). Concise length is enforced in `GeminiPrompts`, not by capping this.
+    static let summarizeOutputTokenCeiling = 4096
+
     init(model: String = "gemini-2.0-flash") throws {
-        self.apiKey = "AIzaSyAkLyVMlk1uJsezC8kE1NhtoxFoTOVb_9g"
-        self.model = "gemini-2.0-flash"
+        self.apiKey = Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as! String
+        self.model = "gemini-2.5-flash"
     }
 
     // MARK: - Public API
     /// If `images` is provided, all images will be sent alongside the text.
-    func AI_Response(text: String, prompt: String, images: [UIImage]? = nil) async throws -> String {
+    /// `prompt` should already include any output-language instructions (see `GeminiPrompts`).
+    func AI_Response(text: String, prompt: String, images: [UIImage]? = nil, maxOutputTokens: Int = 500) async throws -> String {
         let systemPrompt = prompt
 
         let system = Content(role: "system", parts: [Part(text: systemPrompt)])
@@ -89,7 +93,7 @@ struct GeminiClient {
         let body = RequestBody(
             systemInstruction: system,
             contents: [user],
-            generationConfig: GenerationConfig(temperature: 0.2, maxOutputTokens: 500)
+            generationConfig: GenerationConfig(temperature: 0.2, maxOutputTokens: maxOutputTokens)
         )
 
         var components = URLComponents(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent")!
@@ -100,16 +104,28 @@ struct GeminiClient {
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw ClientError.invalidResponse
+        if let http = response as? HTTPURLResponse {
+            if !(200..<300).contains(http.statusCode) {
+                let bodyString = String(data: data, encoding: .utf8) ?? "<no response body>"
+                print("Gemini API error: status=\(http.statusCode) body=\(bodyString)")
+                throw ClientError.invalidResponse(status: http.statusCode, body: bodyString)
+            }
         }
 
         let decoded = try JSONDecoder().decode(ResponseBody.self, from: data)
-        guard let candidate = decoded.candidates?.first else { throw ClientError.emptyOutput }
+        guard let candidate = decoded.candidates?.first else {
+            let bodyString = String(data: data, encoding: .utf8) ?? "<no response body>"
+            print("Gemini API empty output: \(bodyString)")
+            throw ClientError.emptyOutput
+        }
 
         // Concatenate all text parts just in case there are multiple.
         let textOut = candidate.content.parts.compactMap { $0.text }.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !textOut.isEmpty else { throw ClientError.emptyOutput }
+        guard !textOut.isEmpty else {
+            let bodyString = String(data: data, encoding: .utf8) ?? "<no response body>"
+            print("Gemini API output was empty. Response: \(bodyString)")
+            throw ClientError.emptyOutput
+        }
         return textOut
     }
 }

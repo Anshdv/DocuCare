@@ -1,0 +1,3 @@
+# Local API keys (never commit)
+DocuCare/Config/Secrets.xcconfig
+DocuCare/Config/.env

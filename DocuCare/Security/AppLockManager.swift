@@ -12,14 +12,12 @@ import Combine
 final class AppLockManager: ObservableObject {
     @Published var isLocked: Bool = true
 
-    func unlock() {
+    func unlock(localizedReason: String) {
         let context = LAContext()
         var err: NSError?
-        let reason = "Unlock to access your medical reports."
 
-        // Use .deviceOwnerAuthentication to allow biometrics or passcode fallback
         if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &err) {
-            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { success, _ in
+            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: localizedReason) { success, _ in
                 DispatchQueue.main.async { self.isLocked = !success }
             }
         }
