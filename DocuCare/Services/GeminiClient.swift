@@ -60,6 +60,8 @@ struct GeminiClient {
     enum ClientError: Error {
         case missingAPIKey
         case leakedAPIKey
+        case rateLimited
+        case serviceUnavailable
         case invalidResponse(status: Int, body: String)
         case emptyOutput
     }
@@ -131,21 +133,25 @@ struct GeminiClient {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        if let http = response as? HTTPURLResponse {
-            if !(200..<300).contains(http.statusCode) {
-                let bodyString = String(data: data, encoding: .utf8) ?? "<no response body>"
-                print("Gemini API error: status=\(http.statusCode) body=\(bodyString)")
-                if http.statusCode == 403,
-                   let decoded = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data),
-                   let status = decoded.error?.status,
-                   let message = decoded.error?.message,
-                   status == "PERMISSION_DENIED",
-                   message.localizedCaseInsensitiveContains("reported as leaked") {
-                    throw ClientError.leakedAPIKey
-                }
-                throw ClientError.invalidResponse(status: http.statusCode, body: bodyString)
+        let (data, response) = try await performRequestWithRetry(request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            let bodyString = String(data: data, encoding: .utf8) ?? "<no response body>"
+            print("Gemini API error: status=\(http.statusCode) body=\(bodyString)")
+            if http.statusCode == 403,
+               let decoded = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data),
+               let status = decoded.error?.status,
+               let message = decoded.error?.message,
+               status == "PERMISSION_DENIED",
+               message.localizedCaseInsensitiveContains("reported as leaked") {
+                throw ClientError.leakedAPIKey
             }
+            if http.statusCode == 429 {
+                throw ClientError.rateLimited
+            }
+            if http.statusCode == 503 {
+                throw ClientError.serviceUnavailable
+            }
+            throw ClientError.invalidResponse(status: http.statusCode, body: bodyString)
         }
 
         let decoded = try JSONDecoder().decode(ResponseBody.self, from: data)
@@ -164,6 +170,40 @@ struct GeminiClient {
         }
         return textOut
     }
+
+    private func performRequestWithRetry(_ request: URLRequest, maxAttempts: Int = 3) async throws -> (Data, URLResponse) {
+        var lastError: Error?
+        for attempt in 1...maxAttempts {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                if let http = response as? HTTPURLResponse {
+                    let retriableStatusCodes: Set<Int> = [429, 500, 502, 503, 504]
+                    if retriableStatusCodes.contains(http.statusCode), attempt < maxAttempts {
+                        try await Task.sleep(nanoseconds: retryDelayNanoseconds(from: http, attempt: attempt))
+                        continue
+                    }
+                }
+                return (data, response)
+            } catch {
+                lastError = error
+                let retriableNetworkError = (error as? URLError).map { [.timedOut, .networkConnectionLost, .cannotConnectToHost, .dnsLookupFailed].contains($0.code) } ?? false
+                if retriableNetworkError, attempt < maxAttempts {
+                    try await Task.sleep(nanoseconds: retryDelayNanoseconds(from: nil, attempt: attempt))
+                    continue
+                }
+                throw error
+            }
+        }
+        throw lastError ?? ClientError.serviceUnavailable
+    }
+
+    private func retryDelayNanoseconds(from response: HTTPURLResponse?, attempt: Int) -> UInt64 {
+        if let retryAfter = response?.value(forHTTPHeaderField: "Retry-After"), let seconds = Double(retryAfter), seconds > 0 {
+            return UInt64(seconds * 1_000_000_000)
+        }
+        let seconds = min(pow(2.0, Double(attempt - 1)), 8.0)
+        return UInt64(seconds * 1_000_000_000)
+    }
 }
 
 extension GeminiClient.ClientError: LocalizedError {
@@ -173,6 +213,10 @@ extension GeminiClient.ClientError: LocalizedError {
             return "Gemini API key is missing. Set GEMINI_API_KEY in your app config."
         case .leakedAPIKey:
             return "Gemini API key was flagged as leaked. Generate a new key and update GEMINI_API_KEY."
+        case .rateLimited:
+            return "Gemini API quota/rate limit reached. Try again shortly or increase your quota."
+        case .serviceUnavailable:
+            return "Gemini service is temporarily unavailable (503). Please try again."
         case .invalidResponse(let status, _):
             return "Gemini API request failed with status \(status)."
         case .emptyOutput:
