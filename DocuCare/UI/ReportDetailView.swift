@@ -38,8 +38,10 @@ struct ReportDetailView: View {
     var body: some View {
         Group {
             if let report {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                ZStack {
+                    AppBackgroundView()
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
 
                         // Editable Title + Speech button
                         HStack(alignment: .center, spacing: 8) {
@@ -69,10 +71,10 @@ struct ReportDetailView: View {
 
                         HStack(spacing: 8) {
                             Text(report.createdAt, style: .date)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppTheme.secondaryText)
                             if report.pageCount > 0 {
                                 Text("• \(L10n.pageLabel(count: report.pageCount, languageCode: lang))")
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(AppTheme.secondaryText)
                             }
                         }
                         .font(.subheadline)
@@ -98,13 +100,17 @@ struct ReportDetailView: View {
                             Spacer()
                             Text(L10n.string(.aiDisclaimer, languageCode: lang))
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(AppTheme.secondaryText)
                                 .padding(.top, 2)
                             Spacer()
                         }
+                        }
+                        .padding()
+                        .textSelection(.enabled)
+                        .appCardStyle()
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
                     }
-                    .padding()
-                    .textSelection(.enabled)
                 }
                 .navigationTitle(L10n.string(.reportDetails, languageCode: lang))
                 .navigationBarTitleDisplayMode(.inline)

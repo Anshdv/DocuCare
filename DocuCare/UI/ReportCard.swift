@@ -8,18 +8,18 @@ struct ReportCard: View {
             Text(report.title)
                 .font(.title2)
                 .bold()
-                .foregroundColor(.primary)
+                .foregroundStyle(AppTheme.softText)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
 
             HStack(spacing: 8) {
                 Text(report.createdAt, style: .date)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(AppTheme.secondaryText)
                 if report.pageCount > 0 {
                     Text("• \(report.pageCount) page\(report.pageCount == 1 ? "" : "s")")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.secondaryText)
                 }
             }
             if let summary = report.summary, !summary.isEmpty {
@@ -28,7 +28,7 @@ struct ReportCard: View {
                     .lineLimit(3)
                     .lineSpacing(4)
                     .multilineTextAlignment(.leading)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(AppTheme.secondaryText)
             }
         }
         .padding()

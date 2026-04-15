@@ -84,6 +84,7 @@ struct ContentView: View {
     var body: some View {
         let mainContent = NavigationStack {
             ZStack(alignment: .bottom) {
+                AppBackgroundView()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
                         searchBar
@@ -116,19 +117,17 @@ struct ContentView: View {
                 // --- Bottom fade starts above textbox, fully black/opaque beneath ---
                 VStack(spacing: 0) {
                     Spacer()
-                    // Fade starts about 55 above input bar, ends just above it
+                    // Use a single smooth fade to avoid visible background banding near the chat bar.
                     LinearGradient(
                         gradient: Gradient(stops: [
                             .init(color: .clear, location: 0.0),
-                            .init(color: Color(.systemBackground).opacity(0.95), location: 0.6),
-                            .init(color: Color(.systemBackground), location: 1.0)
+                            .init(color: AppTheme.backgroundBottom.opacity(0.55), location: 0.55),
+                            .init(color: AppTheme.backgroundBottom, location: 1.0)
                         ]),
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                    .frame(height: 55)
-                    Color(.systemBackground)
-                        .frame(height: 65)
+                    .frame(height: 120)
                 }
                 .allowsHitTesting(false)
                 .ignoresSafeArea(edges: .bottom)
@@ -157,6 +156,7 @@ struct ContentView: View {
         }
 
         mainContent
+            .toolbarColorScheme(.light, for: .navigationBar)
             .sheet(isPresented: $showingProfile) {
                 NavigationStack {
                     ProfileView()
@@ -208,17 +208,15 @@ struct ContentView: View {
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundStyle(AppTheme.secondaryText)
             TextField(L10n.string(.searchPlaceholder, languageCode: lang), text: $searchText)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
+                .foregroundStyle(AppTheme.softText)
                 .focused($searchFieldFocused)
         }
         .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.systemGray6))
-        )
+        .appTextFieldStyle()
         .padding(.horizontal, 2)
     }
 
@@ -230,11 +228,11 @@ struct ContentView: View {
                 showingScanner = true
             } label: {
                 Label(L10n.string(.scanMedicalReport, languageCode: lang), systemImage: "camera.viewfinder")
-                    .font(.system(size: 18))
+                    .font(.system(size: 17, weight: .semibold))
                     .padding(.horizontal, 15)
             }
             .padding(.top, 20)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(PrimaryButtonStyle())
             .disabled(isProcessing)
             Spacer()
         }
@@ -251,8 +249,9 @@ struct ContentView: View {
                                 .foregroundStyle(.blue)
                             Text(msg.question)
                                 .font(.callout)
+                                .foregroundStyle(AppTheme.softText)
                                 .padding(8)
-                                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray6)))
+                                .background(RoundedRectangle(cornerRadius: 10).fill(AppTheme.chipFill))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -261,8 +260,9 @@ struct ContentView: View {
                                 .foregroundStyle(.red)
                             Text(msg.answer)
                                 .font(.body)
+                                .foregroundStyle(AppTheme.softText)
                                 .padding(8)
-                                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray5)))
+                                .background(RoundedRectangle(cornerRadius: 10).fill(AppTheme.rowFill))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -284,6 +284,7 @@ struct ContentView: View {
                 .padding(.vertical, 12)
                 .padding(.horizontal, 18)
                 .background(Color.clear)
+                .foregroundStyle(AppTheme.softText)
                 .disableAutocorrection(true)
                 .lineLimit(1...5)
                 .disabled(isSendingPrompt)
@@ -302,11 +303,15 @@ struct ContentView: View {
             .padding(.trailing, 10)
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSendingPrompt)
         }
-        .background(.ultraThinMaterial)
+        .background(AppTheme.rowFill)
         .clipShape(Capsule())
         .padding(.horizontal, 10)
         .ignoresSafeArea(edges: .bottom)
-        .shadow(color: .black.opacity(0.07), radius: 8, y: 1)
+        .overlay(
+            Capsule()
+                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.1), radius: 10, y: 2)
     }
 
     // MARK: - Photo Picker State and Handlers
@@ -547,8 +552,11 @@ private struct ReportListSection: View {
                     allReports.isEmpty
                     ? L10n.string(.emptyScanPrompt, languageCode: languageCode)
                     : L10n.string(.emptySearchPrompt, languageCode: languageCode)
-                ).font(.headline)
+                )
+                .font(.headline)
+                .foregroundStyle(AppTheme.secondaryText)
             )
+            .foregroundStyle(AppTheme.softText)
             .padding(.top, 20)
         } else {
             let minHeight: CGFloat = {
@@ -565,6 +573,7 @@ private struct ReportListSection: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(report.title)
                                 .font(.title2).bold()
+                                .foregroundStyle(AppTheme.softText)
                             HStack(spacing: 8) {
                                 Text(report.createdAt, style: .date)
                                 if report.pageCount > 0 {
@@ -586,17 +595,26 @@ private struct ReportListSection: View {
                         .buttonStyle(.plain)
                     }
                     .contentShape(Rectangle())
+                    .padding(.vertical, 4)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(AppTheme.rowFill)
+                    )
                     .swipeActions {
                         Button(role: .destructive) { onDelete(report) } label: {
                             Label(L10n.string(.delete, languageCode: languageCode), systemImage: "trash")
                         }
                     }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
             .scrollContentBackground(.hidden) // <--- hides the default background
             .background(Color.clear)          // <--- makes sure outer List is also clear
-            .listRowBackground(Color.clear)   // <--- makes each row's background transparent
+            .listStyle(.plain)
             .frame(minHeight: minHeight)
+            .appCardStyle()
         }
     }
 }

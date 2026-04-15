@@ -10,12 +10,14 @@ struct SummaryFormattedView: View {
                 switch block {
                 case .paragraph(let text):
                     Text(text)
+                        .foregroundStyle(AppTheme.softText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 case .bullet(let text):
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("\u{2022}")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.secondaryText)
                         Text(text)
+                            .foregroundStyle(AppTheme.softText)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }

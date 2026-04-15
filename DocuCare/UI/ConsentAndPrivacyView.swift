@@ -6,55 +6,58 @@ struct ConsentAndPrivacyView: View {
     var onContinue: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(L10n.string(.consentPolicyTitle, languageCode: languageCode))
-                        .font(.title)
-                        .bold()
-                        .padding(.bottom, 8)
+        ZStack {
+            AppBackgroundView()
+            VStack(alignment: .leading, spacing: 24) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(L10n.string(.consentPolicyTitle, languageCode: languageCode))
+                            .font(.title)
+                            .bold()
+                            .foregroundStyle(AppTheme.softText)
+                            .padding(.bottom, 8)
 
-                    Text(L10n.string(.consentPolicyBody, languageCode: languageCode))
-                        .font(.body)
-                        .foregroundStyle(.primary)
+                        Text(L10n.string(.consentPolicyBody, languageCode: languageCode))
+                            .font(.body)
+                            .foregroundStyle(AppTheme.softText)
 
-                    HStack(alignment: .top) {
-                        Toggle(isOn: $acknowledged) {
-                            Text(L10n.string(.consentToggleLabel, languageCode: languageCode))
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                        HStack(alignment: .top) {
+                            Toggle(isOn: $acknowledged) {
+                                Text(L10n.string(.consentToggleLabel, languageCode: languageCode))
+                                    .font(.callout)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .toggleStyle(CheckboxToggleStyle(
+                                checkedLabel: L10n.string(.accessibilityChecked, languageCode: languageCode),
+                                uncheckedLabel: L10n.string(.accessibilityUnchecked, languageCode: languageCode)
+                            ))
                         }
-                        .toggleStyle(CheckboxToggleStyle(
-                            checkedLabel: L10n.string(.accessibilityChecked, languageCode: languageCode),
-                            uncheckedLabel: L10n.string(.accessibilityUnchecked, languageCode: languageCode)
-                        ))
+                        .padding(.top, 12)
                     }
-                    .padding(.top, 12)
+                    .padding(.horizontal)
+                    .padding(.top)
+                    .textSelection(.enabled)
                 }
-                .padding(.horizontal)
-                .padding(.top)
-                .textSelection(.enabled)
-            }
+                .appCardStyle()
+                .padding(.horizontal, 18)
+                .padding(.top, 20)
 
-            Spacer()
+                Spacer()
 
-            Button(action: {
-                if acknowledged {
-                    onContinue()
+                Button(action: {
+                    if acknowledged {
+                        onContinue()
+                    }
+                }) {
+                    Text(L10n.string(.consentContinue, languageCode: languageCode))
                 }
-            }) {
-                Text(L10n.string(.consentContinue, languageCode: languageCode))
-                    .bold()
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(acknowledged ? Color.accentColor : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(!acknowledged)
+                .opacity(acknowledged ? 1 : 0.6)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 24)
             }
-            .disabled(!acknowledged)
-            .padding(.horizontal)
-            .padding(.bottom, 24)
         }
         .navigationTitle(L10n.string(.consentRequiredNav, languageCode: languageCode))
         .navigationBarTitleDisplayMode(.inline)

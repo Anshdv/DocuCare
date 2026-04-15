@@ -19,70 +19,75 @@ struct ProfileView: View {
     private var lang: String { session.preferredLanguageCode }
 
     var body: some View {
-        Form {
-            Section {
-                LabeledContent(L10n.string(.email, languageCode: lang)) {
-                    Text(session.email)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+        ZStack {
+            AppBackgroundView()
+            Form {
+                Section {
+                    LabeledContent(L10n.string(.email, languageCode: lang)) {
+                        Text(session.email)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    TextField(L10n.string(.profileNewEmailPlaceholder, languageCode: lang), text: $newEmail)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                    SecureField(L10n.string(.profileCurrentPasswordForEmail, languageCode: lang), text: $emailChangePassword)
+                        .textContentType(.password)
+                    Button(L10n.string(.profileUpdateEmail, languageCode: lang)) {
+                        applyEmailChange()
+                    }
+                    .disabled(newEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || emailChangePassword.isEmpty)
+                } header: {
+                    Text(L10n.string(.profileAccountSection, languageCode: lang))
                 }
-                TextField(L10n.string(.profileNewEmailPlaceholder, languageCode: lang), text: $newEmail)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                SecureField(L10n.string(.profileCurrentPasswordForEmail, languageCode: lang), text: $emailChangePassword)
-                    .textContentType(.password)
-                Button(L10n.string(.profileUpdateEmail, languageCode: lang)) {
-                    applyEmailChange()
-                }
-                .disabled(newEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || emailChangePassword.isEmpty)
-            } header: {
-                Text(L10n.string(.profileAccountSection, languageCode: lang))
-            }
 
-            Section {
-                Picker(L10n.string(.language, languageCode: lang), selection: Binding(
-                    get: { session.preferredLanguageCode },
-                    set: { session.setPreferredLanguageCode($0) }
-                )) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(language.pickerTitle).tag(language.rawValue)
+                Section {
+                    Picker(L10n.string(.language, languageCode: lang), selection: Binding(
+                        get: { session.preferredLanguageCode },
+                        set: { session.setPreferredLanguageCode($0) }
+                    )) {
+                        ForEach(AppLanguage.allCases) { language in
+                            Text(language.pickerTitle).tag(language.rawValue)
+                        }
+                    }
+                } header: {
+                    Text(L10n.string(.changeLanguage, languageCode: lang))
+                }
+
+                Section {
+                    SecureField(L10n.string(.profileCurrentPassword, languageCode: lang), text: $currentPassword)
+                        .textContentType(.password)
+                    SecureField(L10n.string(.profileNewPassword, languageCode: lang), text: $newPassword)
+                        .textContentType(.newPassword)
+                    SecureField(L10n.string(.profileConfirmPassword, languageCode: lang), text: $confirmPassword)
+                        .textContentType(.newPassword)
+                    Button(L10n.string(.profileSavePassword, languageCode: lang)) {
+                        applyPasswordChange()
+                    }
+                    .disabled(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty)
+                } header: {
+                    Text(L10n.string(.profileSecuritySection, languageCode: lang))
+                }
+
+                Section {
+                    Button(L10n.string(.profilePrivacyButton, languageCode: lang)) {
+                        showingPrivacy = true
                     }
                 }
-            } header: {
-                Text(L10n.string(.changeLanguage, languageCode: lang))
-            }
 
-            Section {
-                SecureField(L10n.string(.profileCurrentPassword, languageCode: lang), text: $currentPassword)
-                    .textContentType(.password)
-                SecureField(L10n.string(.profileNewPassword, languageCode: lang), text: $newPassword)
-                    .textContentType(.newPassword)
-                SecureField(L10n.string(.profileConfirmPassword, languageCode: lang), text: $confirmPassword)
-                    .textContentType(.newPassword)
-                Button(L10n.string(.profileSavePassword, languageCode: lang)) {
-                    applyPasswordChange()
-                }
-                .disabled(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty)
-            } header: {
-                Text(L10n.string(.profileSecuritySection, languageCode: lang))
-            }
-
-            Section {
-                Button(L10n.string(.profilePrivacyButton, languageCode: lang)) {
-                    showingPrivacy = true
+                Section {
+                    Button(role: .destructive) {
+                        session.logOut()
+                        dismiss()
+                    } label: {
+                        Text(L10n.string(.logOut, languageCode: lang))
+                    }
                 }
             }
-
-            Section {
-                Button(role: .destructive) {
-                    session.logOut()
-                    dismiss()
-                } label: {
-                    Text(L10n.string(.logOut, languageCode: lang))
-                }
-            }
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
         }
         .navigationTitle(L10n.string(.profileTitle, languageCode: lang))
         .navigationBarTitleDisplayMode(.inline)
@@ -99,8 +104,10 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text(L10n.string(.consentPolicyTitle, languageCode: lang))
                             .font(.title2.bold())
+                            .foregroundStyle(AppTheme.softText)
                         Text(L10n.string(.consentPolicyBody, languageCode: lang))
                             .font(.body)
+                            .foregroundStyle(AppTheme.softText)
                     }
                     .padding()
                     .textSelection(.enabled)

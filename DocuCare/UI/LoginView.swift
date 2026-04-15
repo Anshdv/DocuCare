@@ -35,85 +35,98 @@ struct LoginView: View {
     var body: some View {
         NavigationStack(path: $path) {
             GeometryReader { geometry in
-                ScrollView {
-                    VStack {
-                        Spacer(minLength: geometry.size.height / 7)
+                ZStack {
+                    AppBackgroundView()
+                    ScrollView {
+                        VStack {
+                            Spacer(minLength: geometry.size.height / 7)
 
-                        VStack(spacing: 32) {
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .frame(width: 72, height: 72)
-                                .foregroundColor(.blue)
-                                .padding(.top, 60)
+                            VStack(spacing: 28) {
+                                Image(systemName: "cross.case.circle.fill")
+                                    .resizable()
+                                    .frame(width: 74, height: 74)
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [AppTheme.accent, AppTheme.accentSecondary],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .padding(.top, 42)
 
-                            Text(L10n.string(.welcomeTitle, languageCode: lang))
-                                .font(.title).bold()
-                            Text(L10n.string(.welcomeSubtitle, languageCode: lang))
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                                .padding(.bottom)
+                                Text(L10n.string(.welcomeTitle, languageCode: lang))
+                                    .font(.title).bold()
+                                    .foregroundStyle(AppTheme.softText)
+                                Text(L10n.string(.welcomeSubtitle, languageCode: lang))
+                                    .font(.headline)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .padding(.bottom, 2)
 
-                            VStack(spacing: 18) {
-                                TextField(L10n.string(.email, languageCode: lang), text: $email)
-                                    .autocapitalization(.none)
-                                    .keyboardType(.emailAddress)
-                                    .padding()
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray6)))
-                                    .focused($focusField, equals: .email)
+                                VStack(spacing: 14) {
+                                    TextField(
+                                        "",
+                                        text: $email,
+                                        prompt: Text(L10n.string(.email, languageCode: lang))
+                                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                                    )
+                                        .autocapitalization(.none)
+                                        .keyboardType(.emailAddress)
+                                        .appTextFieldStyle()
+                                        .focused($focusField, equals: .email)
 
-                                SecureField(L10n.string(.password, languageCode: lang), text: $password)
-                                    .padding()
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray6)))
-                                    .focused($focusField, equals: .password)
+                                    SecureField(
+                                        "",
+                                        text: $password,
+                                        prompt: Text(L10n.string(.password, languageCode: lang))
+                                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                                    )
+                                        .appTextFieldStyle()
+                                        .focused($focusField, equals: .password)
+                                }
+                                .padding(.horizontal, 26)
+
+                                if let error = error {
+                                    Text(error)
+                                        .foregroundColor(.red)
+                                        .font(.callout)
+                                }
+
+                                Button {
+                                    login()
+                                } label: {
+                                    Text(L10n.string(.logIn, languageCode: lang))
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                                .padding(.horizontal, 26)
+                                .disabled(email.isEmpty || password.isEmpty)
+
+                                Button {
+                                    showSignUp = true
+                                    signUpEmail = ""
+                                    signUpPassword = ""
+                                    signUpError = nil
+                                    signUpLanguageCode = AppLanguage.bestMatchForSystem().rawValue
+                                } label: {
+                                    Text(L10n.string(.signUpPrompt, languageCode: lang))
+                                        .font(.callout.weight(.semibold))
+                                        .foregroundStyle(AppTheme.accentSecondary)
+                                }
+                                .padding(.top, 4)
+                                .padding(.bottom, 10)
                             }
-                            .padding(.horizontal, 32)
+                            .frame(maxWidth: .infinity)
+                            .appCardStyle()
+                            .padding(.horizontal, 20)
 
-                            if let error = error {
-                                Text(error)
-                                    .foregroundColor(.red)
-                                    .font(.callout)
-                            }
-
-                            Button {
-                                login()
-                            } label: {
-                                Text(L10n.string(.logIn, languageCode: lang))
-                                    .bold()
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .foregroundStyle(.white)
-                                    .cornerRadius(10)
-                            }
-                            .padding(.horizontal, 32)
-                            .disabled(email.isEmpty || password.isEmpty)
-
-                            Button {
-                                showSignUp = true
-                                signUpEmail = ""
-                                signUpPassword = ""
-                                signUpError = nil
-                                signUpLanguageCode = AppLanguage.bestMatchForSystem().rawValue
-                            } label: {
-                                Text(L10n.string(.signUpPrompt, languageCode: lang))
-                                    .font(.callout)
-                            }
-                            .padding(.top, 10)
+                            Spacer(minLength: geometry.size.height / 6)
                         }
-                        .frame(maxWidth: .infinity)
-                        .background(Color(.systemBackground).opacity(0.98))
-                        .cornerRadius(16)
-                        .shadow(color: Color(.black).opacity(0.05), radius: 8, y: 2)
-
-                        Spacer(minLength: geometry.size.height / 6)
-                    }
-                    .frame(minHeight: geometry.size.height)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        hideKeyboard()
+                        .frame(minHeight: geometry.size.height)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            hideKeyboard()
+                        }
                     }
                 }
-                .background(Color(.systemBackground))
                 .ignoresSafeArea()
                 .sheet(isPresented: $showSignUp) {
                     signUpSheet
@@ -170,60 +183,69 @@ struct LoginView: View {
 
     private var signUpSheet: some View {
         NavigationView {
-            VStack(spacing: 28) {
-                Text(L10n.string(.createAccountTitle, languageCode: signUpLanguageCode))
-                    .font(.title2).bold()
-                    .padding(.top, 40)
+            ZStack {
+                AppBackgroundView()
+                VStack(spacing: 28) {
+                    Text(L10n.string(.createAccountTitle, languageCode: signUpLanguageCode))
+                        .font(.title2).bold()
+                        .foregroundStyle(AppTheme.softText)
+                        .padding(.top, 40)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L10n.string(.chooseLanguage, languageCode: signUpLanguageCode))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Picker(L10n.string(.language, languageCode: signUpLanguageCode), selection: $signUpLanguageCode) {
-                        ForEach(AppLanguage.allCases) { language in
-                            Text(language.pickerTitle).tag(language.rawValue)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(L10n.string(.chooseLanguage, languageCode: signUpLanguageCode))
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                        Picker(L10n.string(.language, languageCode: signUpLanguageCode), selection: $signUpLanguageCode) {
+                            ForEach(AppLanguage.allCases) { language in
+                                Text(language.pickerTitle).tag(language.rawValue)
+                            }
                         }
+                        .pickerStyle(.menu)
                     }
-                    .pickerStyle(.menu)
-                }
-                .padding(.horizontal, 32)
+                    .padding(.horizontal, 32)
 
-                VStack(spacing: 18) {
-                    TextField(L10n.string(.email, languageCode: signUpLanguageCode), text: $signUpEmail)
+                    VStack(spacing: 18) {
+                        TextField(
+                            "",
+                            text: $signUpEmail,
+                            prompt: Text(L10n.string(.email, languageCode: signUpLanguageCode))
+                                .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                        )
                         .autocapitalization(.none)
                         .keyboardType(.emailAddress)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray3)))
+                        .appTextFieldStyle()
                         .focused($signUpFocusField, equals: .email)
 
-                    SecureField(L10n.string(.password, languageCode: signUpLanguageCode), text: $signUpPassword)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray3)))
+                        SecureField(
+                            "",
+                            text: $signUpPassword,
+                            prompt: Text(L10n.string(.password, languageCode: signUpLanguageCode))
+                                .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                        )
+                        .appTextFieldStyle()
                         .focused($signUpFocusField, equals: .password)
-                }
-                .padding(.horizontal, 32)
+                    }
+                    .padding(.horizontal, 32)
 
-                if let error = signUpError {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.callout)
-                }
+                    if let error = signUpError {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.callout)
+                    }
 
-                Button {
-                    signUp()
-                } label: {
-                    Text(L10n.string(.createAccount, languageCode: signUpLanguageCode))
-                        .bold()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green)
-                        .foregroundStyle(.white)
-                        .cornerRadius(10)
-                }
-                .padding(.horizontal, 32)
-                .disabled(signUpEmail.isEmpty || signUpPassword.isEmpty)
+                    Button {
+                        signUp()
+                    } label: {
+                        Text(L10n.string(.createAccount, languageCode: signUpLanguageCode))
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.horizontal, 32)
+                    .disabled(signUpEmail.isEmpty || signUpPassword.isEmpty)
 
-                Spacer()
+                    Spacer()
+                }
+                .appCardStyle()
+                .padding(.horizontal, 20)
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

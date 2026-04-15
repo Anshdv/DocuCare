@@ -11,9 +11,12 @@ struct MedicalSummaryApp: App {
         WindowGroup {
             ZStack {
                 if checkingBiometric {
-                    ProgressView(L10n.string(.authenticating, languageCode: session.effectiveLanguageCode()))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color(.systemBackground))
+                    ZStack {
+                        AppBackgroundView()
+                        ProgressView(L10n.string(.authenticating, languageCode: session.effectiveLanguageCode()))
+                            .foregroundStyle(AppTheme.softText)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if session.isLoggedIn {
                     if session.hasConsented {
                         ContentView()

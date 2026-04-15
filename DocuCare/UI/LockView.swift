@@ -14,24 +14,36 @@ struct LockView: View {
     private var lang: String { session.effectiveLanguageCode() }
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 44, weight: .semibold))
-            Text(L10n.string(.locked, languageCode: lang))
-                .font(.title2).bold()
-            Text(L10n.string(.useFaceIDToUnlock, languageCode: lang))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button {
-                lock.unlock(localizedReason: L10n.string(.unlockToAccessReports, languageCode: lang))
-            } label: {
-                Label(L10n.string(.unlockWithFaceID, languageCode: lang), systemImage: "faceid")
+        ZStack {
+            AppBackgroundView()
+            VStack(spacing: 16) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [AppTheme.accent, AppTheme.accentSecondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Text(L10n.string(.locked, languageCode: lang))
+                    .font(.title2).bold()
+                    .foregroundStyle(AppTheme.softText)
+                Text(L10n.string(.useFaceIDToUnlock, languageCode: lang))
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .multilineTextAlignment(.center)
+                Button {
+                    lock.unlock(localizedReason: L10n.string(.unlockToAccessReports, languageCode: lang))
+                } label: {
+                    Label(L10n.string(.unlockWithFaceID, languageCode: lang), systemImage: "faceid")
+                }
+                .buttonStyle(PrimaryButtonStyle())
             }
-            .buttonStyle(.borderedProminent)
+            .padding(22)
+            .appCardStyle()
+            .padding(.horizontal, 28)
         }
-        .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
         .onAppear {
             lock.unlock(localizedReason: L10n.string(.unlockToAccessReports, languageCode: lang))
         }

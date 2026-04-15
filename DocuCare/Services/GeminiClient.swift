@@ -59,8 +59,18 @@ struct GeminiClient {
 
     enum ClientError: Error {
         case missingAPIKey
+        case leakedAPIKey
         case invalidResponse(status: Int, body: String)
         case emptyOutput
+    }
+
+    private struct APIErrorEnvelope: Decodable {
+        struct APIError: Decodable {
+            let code: Int?
+            let message: String?
+            let status: String?
+        }
+        let error: APIError?
     }
 
     // MARK: - Properties
@@ -71,8 +81,23 @@ struct GeminiClient {
     static let summarizeOutputTokenCeiling = 4096
 
     init(model: String = "gemini-2.0-flash") throws {
-        self.apiKey = Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as! String
-        self.model = "gemini-2.5-flash"
+        let plistKey = Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String
+        let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"]
+        let resolvedKey = (envKey?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) ? envKey : plistKey
+        let key = resolvedKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        // Guard common placeholder values so runtime errors are actionable.
+        let placeholderValues = [
+            "YOUR_GEMINI_API_KEY",
+            "$(GEMINI_API_KEY)",
+            "REPLACE_ME"
+        ]
+        guard !key.isEmpty, !placeholderValues.contains(key) else {
+            throw ClientError.missingAPIKey
+        }
+
+        self.apiKey = key
+        self.model = model
     }
 
     // MARK: - Public API
@@ -108,6 +133,14 @@ struct GeminiClient {
             if !(200..<300).contains(http.statusCode) {
                 let bodyString = String(data: data, encoding: .utf8) ?? "<no response body>"
                 print("Gemini API error: status=\(http.statusCode) body=\(bodyString)")
+                if http.statusCode == 403,
+                   let decoded = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data),
+                   let status = decoded.error?.status,
+                   let message = decoded.error?.message,
+                   status == "PERMISSION_DENIED",
+                   message.localizedCaseInsensitiveContains("reported as leaked") {
+                    throw ClientError.leakedAPIKey
+                }
                 throw ClientError.invalidResponse(status: http.statusCode, body: bodyString)
             }
         }
@@ -127,6 +160,21 @@ struct GeminiClient {
             throw ClientError.emptyOutput
         }
         return textOut
+    }
+}
+
+extension GeminiClient.ClientError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .missingAPIKey:
+            return "Gemini API key is missing. Set GEMINI_API_KEY in your app config."
+        case .leakedAPIKey:
+            return "Gemini API key was flagged as leaked. Generate a new key and update GEMINI_API_KEY."
+        case .invalidResponse(let status, _):
+            return "Gemini API request failed with status \(status)."
+        case .emptyOutput:
+            return "Gemini returned an empty response."
+        }
     }
 }
 

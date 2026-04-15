@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>GEMINI_API_KEY</key>
-	<string>AIzaSyASsEIwz49GC-tmLG0VlHlXk-69BKhWLhI</string>
+	<string>$(dsds)</string>
 </dict>
 </plist>
