@@ -16,7 +16,7 @@ struct ProfileView: View {
     @State private var alertTitle: String?
     @State private var alertMessage: String?
 
-    private var lang: String { session.preferredLanguageCode }
+    private var lang: String { session.effectiveLanguageCode() }
 
     var body: some View {
         ZStack {
@@ -25,22 +25,42 @@ struct ProfileView: View {
                 Section {
                     LabeledContent(L10n.string(.email, languageCode: lang)) {
                         Text(session.email)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.secondaryText)
                             .textSelection(.enabled)
                     }
-                    TextField(L10n.string(.profileNewEmailPlaceholder, languageCode: lang), text: $newEmail)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                    SecureField(L10n.string(.profileCurrentPasswordForEmail, languageCode: lang), text: $emailChangePassword)
-                        .textContentType(.password)
+                    .listRowBackground(AppTheme.chipFill)
+
+                    TextField(
+                        "",
+                        text: $newEmail,
+                        prompt: Text(L10n.string(.profileNewEmailPlaceholder, languageCode: lang))
+                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                    )
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .foregroundStyle(AppTheme.softText)
+                    .listRowBackground(AppTheme.chipFill)
+
+                    SecureField(
+                        "",
+                        text: $emailChangePassword,
+                        prompt: Text(L10n.string(.profileCurrentPasswordForEmail, languageCode: lang))
+                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                    )
+                    .textContentType(.password)
+                    .foregroundStyle(AppTheme.softText)
+                    .listRowBackground(AppTheme.chipFill)
+
                     Button(L10n.string(.profileUpdateEmail, languageCode: lang)) {
                         applyEmailChange()
                     }
                     .disabled(newEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || emailChangePassword.isEmpty)
+                    .listRowBackground(AppTheme.chipFill)
                 } header: {
                     Text(L10n.string(.profileAccountSection, languageCode: lang))
+                        .foregroundStyle(AppTheme.softText)
                 }
 
                 Section {
@@ -52,29 +72,59 @@ struct ProfileView: View {
                             Text(language.pickerTitle).tag(language.rawValue)
                         }
                     }
+                    .foregroundStyle(AppTheme.softText)
+                    .listRowBackground(AppTheme.chipFill)
                 } header: {
                     Text(L10n.string(.changeLanguage, languageCode: lang))
+                        .foregroundStyle(AppTheme.softText)
                 }
 
                 Section {
-                    SecureField(L10n.string(.profileCurrentPassword, languageCode: lang), text: $currentPassword)
-                        .textContentType(.password)
-                    SecureField(L10n.string(.profileNewPassword, languageCode: lang), text: $newPassword)
-                        .textContentType(.newPassword)
-                    SecureField(L10n.string(.profileConfirmPassword, languageCode: lang), text: $confirmPassword)
-                        .textContentType(.newPassword)
+                    SecureField(
+                        "",
+                        text: $currentPassword,
+                        prompt: Text(L10n.string(.profileCurrentPassword, languageCode: lang))
+                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                    )
+                    .textContentType(.password)
+                    .foregroundStyle(AppTheme.softText)
+                    .listRowBackground(AppTheme.chipFill)
+
+                    SecureField(
+                        "",
+                        text: $newPassword,
+                        prompt: Text(L10n.string(.profileNewPassword, languageCode: lang))
+                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                    )
+                    .textContentType(.newPassword)
+                    .foregroundStyle(AppTheme.softText)
+                    .listRowBackground(AppTheme.chipFill)
+
+                    SecureField(
+                        "",
+                        text: $confirmPassword,
+                        prompt: Text(L10n.string(.profileConfirmPassword, languageCode: lang))
+                            .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                    )
+                    .textContentType(.newPassword)
+                    .foregroundStyle(AppTheme.softText)
+                    .listRowBackground(AppTheme.chipFill)
+
                     Button(L10n.string(.profileSavePassword, languageCode: lang)) {
                         applyPasswordChange()
                     }
                     .disabled(currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty)
+                    .listRowBackground(AppTheme.chipFill)
                 } header: {
                     Text(L10n.string(.profileSecuritySection, languageCode: lang))
+                        .foregroundStyle(AppTheme.softText)
                 }
 
                 Section {
                     Button(L10n.string(.profilePrivacyButton, languageCode: lang)) {
                         showingPrivacy = true
                     }
+                    .listRowBackground(AppTheme.chipFill)
                 }
 
                 Section {
@@ -84,11 +134,15 @@ struct ProfileView: View {
                     } label: {
                         Text(L10n.string(.logOut, languageCode: lang))
                     }
+                    .listRowBackground(AppTheme.chipFill)
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Color.clear)
+            .id("\(session.preferredLanguageCode)-\(session.localizationRevision)")
         }
+        .preferredColorScheme(.light)
+        .tint(AppTheme.accent)
         .navigationTitle(L10n.string(.profileTitle, languageCode: lang))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -100,18 +154,23 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showingPrivacy) {
             NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text(L10n.string(.consentPolicyTitle, languageCode: lang))
-                            .font(.title2.bold())
-                            .foregroundStyle(AppTheme.softText)
-                        Text(L10n.string(.consentPolicyBody, languageCode: lang))
-                            .font(.body)
-                            .foregroundStyle(AppTheme.softText)
+                ZStack {
+                    AppBackgroundView()
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(L10n.string(.consentPolicyTitle, languageCode: lang))
+                                .font(.title2.bold())
+                                .foregroundStyle(AppTheme.softText)
+                            Text(L10n.string(.consentPolicyBody, languageCode: lang))
+                                .font(.body)
+                                .foregroundStyle(AppTheme.softText)
+                        }
+                        .padding()
+                        .textSelection(.enabled)
                     }
-                    .padding()
-                    .textSelection(.enabled)
                 }
+                .preferredColorScheme(.light)
+                .id("\(lang)-\(session.localizationRevision)")
                 .navigationTitle(L10n.string(.consentPolicyTitle, languageCode: lang))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

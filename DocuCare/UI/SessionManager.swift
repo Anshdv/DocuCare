@@ -34,6 +34,9 @@ final class SessionManager: ObservableObject {
     /// Mirrors the signed-in user's `preferredLanguageCode`, or the last known UI language when logged out.
     @Published var preferredLanguageCode: String
 
+    /// Bumped whenever UI language strings should refresh (e.g. TextField prompts).
+    @Published private(set) var localizationRevision: UInt = 0
+
     static let shared = SessionManager()
 
     private let usersKey = "users"
@@ -85,15 +88,15 @@ final class SessionManager: ObservableObject {
 
     /// Effective UI / AI language: logged-in user's setting, otherwise last session or system locale.
     func effectiveLanguageCode() -> String {
-        let key = email.lowercased()
-        if isLoggedIn, let u = users[key] {
-            return u.preferredLanguageCode
+        if isLoggedIn {
+            return preferredLanguageCode
         }
         return UserDefaults.standard.string(forKey: lastPreferredLanguageKey) ?? AppLanguage.bestMatchForSystem().rawValue
     }
 
     private func persistLanguageCode(_ code: String) {
         preferredLanguageCode = code
+        localizationRevision &+= 1
         UserDefaults.standard.set(code, forKey: lastPreferredLanguageKey)
     }
 

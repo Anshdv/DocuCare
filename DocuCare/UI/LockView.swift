@@ -39,6 +39,7 @@ struct LockView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
+            .id(session.localizationRevision)
             .padding(22)
             .appCardStyle()
             .padding(.horizontal, 28)

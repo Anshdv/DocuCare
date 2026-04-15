@@ -83,6 +83,7 @@ struct LoginView: View {
                                         .appTextFieldStyle()
                                         .focused($focusField, equals: .password)
                                 }
+                                .id(session.localizationRevision)
                                 .padding(.horizontal, 26)
 
                                 if let error = error {
@@ -191,16 +192,21 @@ struct LoginView: View {
                         .foregroundStyle(AppTheme.softText)
                         .padding(.top, 40)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .center, spacing: 10) {
                         Text(L10n.string(.chooseLanguage, languageCode: signUpLanguageCode))
                             .font(.subheadline)
                             .foregroundStyle(AppTheme.secondaryText)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
                         Picker(L10n.string(.language, languageCode: signUpLanguageCode), selection: $signUpLanguageCode) {
                             ForEach(AppLanguage.allCases) { language in
                                 Text(language.pickerTitle).tag(language.rawValue)
                             }
                         }
                         .pickerStyle(.menu)
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.string(.language, languageCode: signUpLanguageCode))
+                        .frame(maxWidth: .infinity)
                     }
                     .padding(.horizontal, 32)
 
@@ -225,6 +231,7 @@ struct LoginView: View {
                         .appTextFieldStyle()
                         .focused($signUpFocusField, equals: .password)
                     }
+                    .id("\(signUpLanguageCode)-\(session.localizationRevision)")
                     .padding(.horizontal, 32)
 
                     if let error = signUpError {

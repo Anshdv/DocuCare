@@ -18,6 +18,8 @@ final class MedicalReport {
     var pdfData: Data?
     var pageCount: Int
     var ownerEmail: String
+    /// Language (`AppLanguage.rawValue`) of `title` and `summary`; empty means legacy / unknown until localized.
+    var contentLanguageCode: String = ""
 
     init(
         id: UUID = UUID(),
@@ -27,7 +29,8 @@ final class MedicalReport {
         summary: String? = nil,
         pdfData: Data? = nil,
         pageCount: Int = 0,
-        ownerEmail: String
+        ownerEmail: String,
+        contentLanguageCode: String = ""
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -37,6 +40,7 @@ final class MedicalReport {
         self.pdfData = pdfData
         self.pageCount = pageCount
         self.ownerEmail = ownerEmail
+        self.contentLanguageCode = contentLanguageCode
     }
 }
 

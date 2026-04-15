@@ -18,7 +18,9 @@ struct ReportDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: SessionManager
 
-    private var lang: String { session.preferredLanguageCode }
+    private var lang: String { session.effectiveLanguageCode() }
+
+    @State private var isAligningLanguage = false
 
     @State private var report: MedicalReport?
     @State private var errorMessage: String?
@@ -45,12 +47,19 @@ struct ReportDetailView: View {
 
                         // Editable Title + Speech button
                         HStack(alignment: .center, spacing: 8) {
-                            TextField(L10n.string(.reportTitlePlaceholder, languageCode: lang), text: Binding(
-                                get: { report.title },
-                                set: { report.title = $0 }
-                            ))
+                            TextField(
+                                "",
+                                text: Binding(
+                                    get: { report.title },
+                                    set: { report.title = $0 }
+                                ),
+                                prompt: Text(L10n.string(.reportTitlePlaceholder, languageCode: lang))
+                                    .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+                            )
+                            .id("\(report.id.uuidString)-\(report.title)-\(report.contentLanguageCode)-\(report.summary?.count ?? 0)-\(session.localizationRevision)")
                             .font(.title)
                             .bold()
+                            .foregroundStyle(AppTheme.softText)
                             .focused($titleIsFocused)
                             .padding(.top)
                             .onSubmit {
@@ -70,7 +79,7 @@ struct ReportDetailView: View {
                         }
 
                         HStack(spacing: 8) {
-                            Text(report.createdAt, style: .date)
+                            Text(formattedReportDate(report.createdAt))
                                 .foregroundStyle(AppTheme.secondaryText)
                             if report.pageCount > 0 {
                                 Text("• \(L10n.pageLabel(count: report.pageCount, languageCode: lang))")
@@ -110,6 +119,13 @@ struct ReportDetailView: View {
                         .appCardStyle()
                         .padding(.horizontal)
                         .padding(.vertical, 12)
+                    }
+                }
+                .overlay {
+                    if isAligningLanguage {
+                        ProgressView()
+                            .padding()
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
                 .navigationTitle(L10n.string(.reportDetails, languageCode: lang))
@@ -206,9 +222,20 @@ struct ReportDetailView: View {
                 ProgressView(L10n.string(.loading, languageCode: lang))
             }
         }
-        .task {
+        .task(id: "\(reportID.uuidString)-\(lang)") {
             await loadReport()
+            guard let r = report else { return }
+            isAligningLanguage = true
+            defer { isAligningLanguage = false }
+            await ReportLocalizationChain.shared.synchronizeReport(r, targetCode: lang, modelContext: context)
         }
+    }
+
+    private func formattedReportDate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.locale = Locale(identifier: AppLanguage.localeIdentifier(from: lang))
+        return df.string(from: date)
     }
 
     // MARK: - Editable Title Saving

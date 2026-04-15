@@ -50,7 +50,7 @@ struct ContentView: View {
 
     @State private var searchText: String = ""
 
-    private var lang: String { session.preferredLanguageCode }
+    private var lang: String { session.effectiveLanguageCode() }
 
     private func formatReportDate(_ date: Date) -> String {
         let df = DateFormatter()
@@ -81,6 +81,8 @@ struct ContentView: View {
     @State private var reportPendingDelete: MedicalReport?
     @State private var showingDeleteConfirmation = false
 
+    @State private var reportLocalizationTask: Task<Void, Never>?
+
     var body: some View {
         let mainContent = NavigationStack {
             ZStack(alignment: .bottom) {
@@ -93,6 +95,7 @@ struct ContentView: View {
                             filteredReports: filteredReports,
                             allReports: reports,
                             languageCode: lang,
+                            listIdentity: session.localizationRevision,
                             onDelete: { report in
                                 reportPendingDelete = report
                                 showingDeleteConfirmation = true
@@ -156,6 +159,8 @@ struct ContentView: View {
         }
 
         mainContent
+            // App chrome is always light; without this, the nav title follows system dark mode (e.g. white text).
+            .preferredColorScheme(.light)
             .toolbarColorScheme(.light, for: .navigationBar)
             .sheet(isPresented: $showingProfile) {
                 NavigationStack {
@@ -183,6 +188,14 @@ struct ContentView: View {
                 loadPickedPhotos(newItems)
             }
             // --- ALERT for Swipe-to-Delete ---
+            .onChange(of: session.preferredLanguageCode) { _, newCode in
+                reportLocalizationTask?.cancel()
+                reportLocalizationTask = Task { @MainActor in
+                    let snapshot = reports.filter { $0.contentLanguageCode != newCode }
+                    guard !snapshot.isEmpty else { return }
+                    await ReportLocalizationChain.shared.synchronizeOwnedReports(snapshot, targetCode: newCode, modelContext: context)
+                }
+            }
             .alert(L10n.string(.deleteReportTitle, languageCode: lang),
                    isPresented: $showingDeleteConfirmation,
                    actions: {
@@ -209,7 +222,12 @@ struct ContentView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(AppTheme.secondaryText)
-            TextField(L10n.string(.searchPlaceholder, languageCode: lang), text: $searchText)
+            TextField(
+                "",
+                text: $searchText,
+                prompt: Text(L10n.string(.searchPlaceholder, languageCode: lang))
+                    .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
+            )
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .foregroundStyle(AppTheme.softText)
@@ -218,6 +236,7 @@ struct ContentView: View {
         .padding(10)
         .appTextFieldStyle()
         .padding(.horizontal, 2)
+        .id(session.localizationRevision)
     }
 
     @ViewBuilder
@@ -278,11 +297,18 @@ struct ContentView: View {
 
     @ViewBuilder
     private var chatInputBar: some View {
-        HStack(spacing: 8) {
-            TextField(L10n.string(.askQuestion, languageCode: lang), text: $inputText, axis: .vertical)
+        HStack(alignment: .bottom, spacing: 10) {
+            TextField(
+                "",
+                text: $inputText,
+                prompt: Text(L10n.string(.askQuestion, languageCode: lang))
+                    .foregroundStyle(AppTheme.secondaryText.opacity(0.9)),
+                axis: .vertical
+            )
                 .focused($inputIsFocused)
                 .padding(.vertical, 12)
-                .padding(.horizontal, 18)
+                .padding(.leading, 18)
+                .padding(.trailing, 6)
                 .background(Color.clear)
                 .foregroundStyle(AppTheme.softText)
                 .disableAutocorrection(true)
@@ -292,26 +318,40 @@ struct ContentView: View {
             Button {
                 sendPrompt()
             } label: {
-                if isSendingPrompt {
-                    ProgressView()
-                } else {
-                    Image(systemName: "paperplane.fill")
-                        .font(.title2)
+                Group {
+                    if isSendingPrompt {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
+                .frame(width: 44, height: 44)
+                .background(
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.accent, AppTheme.accentSecondary],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .shadow(color: AppTheme.accent.opacity(0.35), radius: 6, y: 2)
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 10)
+            .padding(.trailing, 6)
+            .padding(.bottom, 4)
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSendingPrompt)
         }
         .background(AppTheme.rowFill)
         .clipShape(Capsule())
         .padding(.horizontal, 10)
         .ignoresSafeArea(edges: .bottom)
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.72), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 10, y: 2)
+        .shadow(color: .black.opacity(0.08), radius: 12, y: 3)
+        .id(session.localizationRevision)
     }
 
     // MARK: - Photo Picker State and Handlers
@@ -386,7 +426,7 @@ struct ContentView: View {
 
         Task {
             do {
-                let client = try GeminiClient(model: "gemini-2.0-flash")
+                let client = try GeminiClient()
                 let questionPrompt = GeminiPrompts.chatAssistantPrompt(appLanguageCode: lang)
 
                 let answer = try await client.AI_Response(text: currentQuestion, prompt: questionPrompt)
@@ -445,7 +485,7 @@ struct ContentView: View {
                 // OCR performed on redacted images (matches what user sees)
                 let (text, _) = try await TextRecognizer.recognizeText(from: redactedImages)
 
-                let client = try GeminiClient(model: "gemini-2.0-flash")
+                let client = try GeminiClient()
                 let summarizePrompt = GeminiPrompts.summarizeMedicalReportPrompt(appLanguageCode: lang)
 
                 // Always send redacted images to the AI (full OCR text—no client-side truncation; brevity is enforced in the prompt)
@@ -471,7 +511,8 @@ struct ContentView: View {
                     summary: summary,
                     pdfData: pdf,
                     pageCount: images.count,
-                    ownerEmail: session.email.lowercased() // Always store lowercased
+                    ownerEmail: session.email.lowercased(), // Always store lowercased
+                    contentLanguageCode: lang
                 )
                 context.insert(report)
                 try? context.save()
@@ -540,8 +581,17 @@ private struct ReportListSection: View {
     let filteredReports: [MedicalReport]
     let allReports: [MedicalReport]
     let languageCode: String
+    /// Forces row text to refresh when language / report strings change.
+    let listIdentity: UInt
     let onDelete: (MedicalReport) -> Void
     let onOpen: (MedicalReport) -> Void
+
+    private func formatReportDate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.locale = Locale(identifier: AppLanguage.localeIdentifier(from: languageCode))
+        return df.string(from: date)
+    }
 
     var body: some View {
         if filteredReports.isEmpty {
@@ -559,62 +609,67 @@ private struct ReportListSection: View {
             .foregroundStyle(AppTheme.softText)
             .padding(.top, 20)
         } else {
-            let minHeight: CGFloat = {
-                switch filteredReports.count {
-                case 1: return 150
-                case 2: return 225
-                case 3: return 300
-                default: return 375
-                }
-            }()
             List {
                 ForEach(filteredReports) { report in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(report.title)
-                                .font(.title2).bold()
-                                .foregroundStyle(AppTheme.softText)
-                            HStack(spacing: 8) {
-                                Text(report.createdAt, style: .date)
-                                if report.pageCount > 0 {
-                                    Text("• \(L10n.pageLabel(count: report.pageCount, languageCode: languageCode))")
+                    Button {
+                        onOpen(report)
+                    } label: {
+                        HStack(alignment: .center, spacing: 14) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(report.title)
+                                    .id("\(report.id.uuidString)-\(report.title)-\(report.contentLanguageCode)-\(listIdentity)")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(AppTheme.softText)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                HStack(spacing: 8) {
+                                    Text(formatReportDate(report.createdAt))
+                                    if report.pageCount > 0 {
+                                        Text("• \(L10n.pageLabel(count: report.pageCount, languageCode: languageCode))")
+                                    }
                                 }
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondaryText)
                             }
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.secondaryText.opacity(0.85))
+                                .accessibilityHidden(true)
                         }
-                        Spacer()
-                        Button {
-                            onOpen(report)
-                        } label: {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(Color.accentColor)
-                                .accessibilityLabel(L10n.string(.openMedicalSummary, languageCode: languageCode))
-                        }
-                        .buttonStyle(.plain)
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
-                    .contentShape(Rectangle())
-                    .padding(.vertical, 4)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(AppTheme.rowFill)
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets(top: 5, leading: 4, bottom: 5, trailing: 4))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(AppTheme.chipFill)
+                            .shadow(color: Color.black.opacity(0.05), radius: 8, y: 3)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(AppTheme.cardStroke, lineWidth: 1)
+                            )
                     )
-                    .swipeActions {
-                        Button(role: .destructive) { onDelete(report) } label: {
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            onDelete(report)
+                        } label: {
                             Label(L10n.string(.delete, languageCode: languageCode), systemImage: "trash")
                         }
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                    .accessibilityHint(L10n.string(.openMedicalSummary, languageCode: languageCode))
                 }
             }
-            .scrollContentBackground(.hidden) // <--- hides the default background
-            .background(Color.clear)          // <--- makes sure outer List is also clear
             .listStyle(.plain)
-            .frame(minHeight: minHeight)
-            .appCardStyle()
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .frame(minHeight: CGFloat(min(380, max(120, filteredReports.count * 92))))
+            .environment(\.defaultMinListRowHeight, 1)
+            .id("\(languageCode)-\(listIdentity)")
         }
     }
 }

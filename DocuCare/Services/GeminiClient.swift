@@ -77,10 +77,13 @@ struct GeminiClient {
     let apiKey: String
     let model: String
 
+    /// Model id for `v1beta/models/{model}:generateContent`. Older ids (e.g. `gemini-2.0-flash`) may return 404 for new API keys.
+    static let defaultModelID = "gemini-2.5-flash"
+
     /// High ceiling so the model is not cut off mid-summary (e.g. missing bullets). Concise length is enforced in `GeminiPrompts`, not by capping this.
     static let summarizeOutputTokenCeiling = 4096
 
-    init(model: String = "gemini-2.0-flash") throws {
+    init(model: String = GeminiClient.defaultModelID) throws {
         let plistKey = Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String
         let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"]
         let resolvedKey = (envKey?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false) ? envKey : plistKey
