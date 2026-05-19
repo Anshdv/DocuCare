@@ -6,9 +6,34 @@
 //
 
 import Foundation
+import Network
 import UIKit
 
 struct GeminiClient {
+    // MARK: - Networking profile
+    private enum ConnectivityProfile {
+        case normal
+        case lowQuality
+
+        var maxAttempts: Int {
+            switch self {
+            case .normal:
+                return 3
+            case .lowQuality:
+                return 5
+            }
+        }
+
+        var maxBackoffSeconds: Double {
+            switch self {
+            case .normal:
+                return 8.0
+            case .lowQuality:
+                return 20.0
+            }
+        }
+    }
+
     // MARK: - Types
     struct Part: Codable {
         let text: String?
@@ -171,7 +196,9 @@ struct GeminiClient {
         return textOut
     }
 
-    private func performRequestWithRetry(_ request: URLRequest, maxAttempts: Int = 3) async throws -> (Data, URLResponse) {
+    private func performRequestWithRetry(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        let connectivityProfile = connectivityProfile()
+        let maxAttempts = connectivityProfile.maxAttempts
         var lastError: Error?
         for attempt in 1...maxAttempts {
             do {
@@ -179,7 +206,7 @@ struct GeminiClient {
                 if let http = response as? HTTPURLResponse {
                     let retriableStatusCodes: Set<Int> = [429, 500, 502, 503, 504]
                     if retriableStatusCodes.contains(http.statusCode), attempt < maxAttempts {
-                        try await Task.sleep(nanoseconds: retryDelayNanoseconds(from: http, attempt: attempt))
+                        try await Task.sleep(nanoseconds: retryDelayNanoseconds(from: http, attempt: attempt, maxBackoffSeconds: connectivityProfile.maxBackoffSeconds))
                         continue
                     }
                 }
@@ -188,7 +215,7 @@ struct GeminiClient {
                 lastError = error
                 let retriableNetworkError = (error as? URLError).map { [.timedOut, .networkConnectionLost, .cannotConnectToHost, .dnsLookupFailed].contains($0.code) } ?? false
                 if retriableNetworkError, attempt < maxAttempts {
-                    try await Task.sleep(nanoseconds: retryDelayNanoseconds(from: nil, attempt: attempt))
+                    try await Task.sleep(nanoseconds: retryDelayNanoseconds(from: nil, attempt: attempt, maxBackoffSeconds: connectivityProfile.maxBackoffSeconds))
                     continue
                 }
                 throw error
@@ -197,12 +224,38 @@ struct GeminiClient {
         throw lastError ?? ClientError.serviceUnavailable
     }
 
-    private func retryDelayNanoseconds(from response: HTTPURLResponse?, attempt: Int) -> UInt64 {
+    private func retryDelayNanoseconds(from response: HTTPURLResponse?, attempt: Int, maxBackoffSeconds: Double) -> UInt64 {
         if let retryAfter = response?.value(forHTTPHeaderField: "Retry-After"), let seconds = Double(retryAfter), seconds > 0 {
             return UInt64(seconds * 1_000_000_000)
         }
-        let seconds = min(pow(2.0, Double(attempt - 1)), 8.0)
+        let seconds = min(pow(2.0, Double(attempt - 1)), maxBackoffSeconds)
         return UInt64(seconds * 1_000_000_000)
+    }
+
+    private func connectivityProfile() -> ConnectivityProfile {
+        let monitor = NWPathMonitor()
+        defer { monitor.cancel() }
+        let queue = DispatchQueue(label: "DocuCare.GeminiClient.ConnectivityProbe")
+        let semaphore = DispatchSemaphore(value: 0)
+        var pathSnapshot: NWPath?
+
+        monitor.pathUpdateHandler = { path in
+            pathSnapshot = path
+            semaphore.signal()
+        }
+
+        monitor.start(queue: queue)
+        _ = semaphore.wait(timeout: .now() + 1.0)
+
+        guard let path = pathSnapshot else {
+            return .normal
+        }
+
+        if path.status != .satisfied || path.isConstrained || path.isExpensive {
+            return .lowQuality
+        }
+
+        return .normal
     }
 }
 

@@ -224,10 +224,11 @@ struct ReportDetailView: View {
         }
         .task(id: "\(reportID.uuidString)-\(lang)") {
             await loadReport()
-            guard let r = report else { return }
+            guard report != nil else { return }
             isAligningLanguage = true
             defer { isAligningLanguage = false }
-            await ReportLocalizationChain.shared.synchronizeReport(r, targetCode: lang, modelContext: context)
+            await ReportLocalizationChain.synchronizeReport(reportID: reportID, targetCode: lang, modelContext: context)
+            await loadReport()
         }
     }
 
@@ -285,10 +286,7 @@ struct ReportDetailView: View {
 
     private func loadReport() async {
         do {
-            let descriptor = FetchDescriptor<MedicalReport>(
-                predicate: #Predicate { $0.id == reportID }
-            )
-            report = try context.fetch(descriptor).first
+            report = try MedicalReport.fetchByID(reportID, in: context)
             if report == nil {
                 errorMessage = L10n.string(.reportMayBeDeleted, languageCode: lang)
             }

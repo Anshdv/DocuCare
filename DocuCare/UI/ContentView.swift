@@ -191,9 +191,9 @@ struct ContentView: View {
             .onChange(of: session.preferredLanguageCode) { _, newCode in
                 reportLocalizationTask?.cancel()
                 reportLocalizationTask = Task { @MainActor in
-                    let snapshot = reports.filter { $0.contentLanguageCode != newCode }
-                    guard !snapshot.isEmpty else { return }
-                    await ReportLocalizationChain.shared.synchronizeOwnedReports(snapshot, targetCode: newCode, modelContext: context)
+                    let ids = reports.filter { $0.contentLanguageCode != newCode }.map(\.id)
+                    guard !ids.isEmpty else { return }
+                    await ReportLocalizationChain.synchronizeOwnedReports(ids, targetCode: newCode, modelContext: context)
                 }
             }
             .alert(L10n.string(.deleteReportTitle, languageCode: lang),

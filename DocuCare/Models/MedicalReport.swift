@@ -42,6 +42,17 @@ final class MedicalReport {
         self.ownerEmail = ownerEmail
         self.contentLanguageCode = contentLanguageCode
     }
+
+    /// Loads by primary key without `#Predicate { $0.id == … }`, which can trigger SwiftData runtime traps
+    /// (`EXC_BREAKPOINT` in `ModelContext.fetch`) on some OS / store builds. Scan is acceptable at typical counts.
+    @MainActor
+    static func fetchByID(_ id: UUID, in modelContext: ModelContext) throws -> MedicalReport? {
+        let descriptor = FetchDescriptor<MedicalReport>(
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        let rows = try modelContext.fetch(descriptor)
+        return rows.first { $0.id == id }
+    }
 }
 
 // MARK: - AI-generated title rules

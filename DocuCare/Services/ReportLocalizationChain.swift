@@ -1,38 +1,52 @@
 import Foundation
 import SwiftData
 
-/// Serializes report title/summary localization so SwiftData never sees concurrent `save()` calls
-/// or overlapping Gemini updates for the same store.
-actor ReportLocalizationChain {
-    static let shared = ReportLocalizationChain()
+/// Serializes report title/summary localization across the whole app.
+///
+/// An `actor` is **not** enough here: each `await alignLanguage(...)` **suspends** the actor, so a
+/// second caller (e.g. open report detail while ContentView is batch-translating) can start another
+/// `alignLanguage` overlapping the first—SwiftData then may trap (`EXC_BREAKPOINT`).
+///
+/// Instead we chain `Task { @MainActor in ... }` work so the next job starts only after the previous
+/// fully completes, including all nested `await`s.
+@MainActor
+enum ReportLocalizationChain {
+    private static var tail: Task<Void, Never>?
 
-    /// Batch-align many reports, persisting once at the end.
-    func synchronizeOwnedReports(_ reports: [MedicalReport], targetCode: String, modelContext: ModelContext) async {
-        let snapshot = reports.filter { $0.contentLanguageCode != targetCode }
-        for report in snapshot {
-            try? Task.checkCancellation()
-            await ReportContentTranslator.alignLanguage(
-                of: report,
-                to: targetCode,
-                modelContext: modelContext,
-                persistChanges: false
-            )
+    private static func runSerialized(_ operation: @escaping @MainActor () async -> Void) async {
+        let previous = tail
+        let next = Task { @MainActor in
+            await previous?.value
+            await operation()
         }
-        try? Task.checkCancellation()
-        await MainActor.run {
-            try? modelContext.save()
+        tail = next
+        await next.value
+    }
+
+    /// Batch-align many reports (each translation persists in `alignLanguage`).
+    static func synchronizeOwnedReports(_ reportIDs: [UUID], targetCode: String, modelContext: ModelContext) async {
+        await runSerialized {
+            for reportID in reportIDs {
+                try? Task.checkCancellation()
+                await ReportContentTranslator.alignLanguage(
+                    reportID: reportID,
+                    to: targetCode,
+                    modelContext: modelContext
+                )
+            }
+            try? Task.checkCancellation()
         }
     }
 
-    /// Align a single report (e.g. detail screen), persisting when successful.
-    func synchronizeReport(_ report: MedicalReport, targetCode: String, modelContext: ModelContext) async {
-        guard report.contentLanguageCode != targetCode else { return }
-        try? Task.checkCancellation()
-        await ReportContentTranslator.alignLanguage(
-            of: report,
-            to: targetCode,
-            modelContext: modelContext,
-            persistChanges: true
-        )
+    /// Align a single report (e.g. detail screen).
+    static func synchronizeReport(reportID: UUID, targetCode: String, modelContext: ModelContext) async {
+        await runSerialized {
+            try? Task.checkCancellation()
+            await ReportContentTranslator.alignLanguage(
+                reportID: reportID,
+                to: targetCode,
+                modelContext: modelContext
+            )
+        }
     }
 }
