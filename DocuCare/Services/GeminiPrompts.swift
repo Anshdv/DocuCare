@@ -11,6 +11,11 @@ enum GeminiPrompts {
         Never take on the role of a doctor and always advise to consult a medical professional.
         Advise and strongly recommend to always consult a medical professional and state that this information is only for summarization purposes.
 
+        The user's question may be preceded by a section titled "PATIENT HEALTH CONTEXT" that lists recent metrics shared from the patient's Apple Health profile (age, vitals, weight, BMI, activity, etc.).
+        If that block is present, weave it into your reasoning so the answer reflects the patient's individual picture (e.g. typical ranges given their age, possible relevance of recent vitals).
+        Never quote raw rows back; mention only what is clearly relevant to the question. Do not invent values that are not in the block, and gently note when a value is missing if the user asks about it.
+        Continue to refuse personalized prescriptions, dosing, or definitive diagnoses regardless of how detailed the health context is.
+
         Write your entire reply for the user in \(lang). Do not use any other language for user-visible text.
         """
     }
@@ -18,6 +23,10 @@ enum GeminiPrompts {
     static func summarizeMedicalReportPrompt(appLanguageCode: String) -> String {
         let lang = AppLanguage.from(code: appLanguageCode).englishNameForAI
         return """
+        The user message may begin with a section titled "PATIENT HEALTH CONTEXT" that lists recent metrics shared from the patient's Apple Health profile (age, vitals, weight, BMI, activity, etc.). When present, treat this purely as background to better interpret what follows. Do not echo it back, do not summarize it as its own section, and do not include it in the bullets. The bullets must describe the medical report; the health context only sharpens the wording (e.g. flagging when a finding sits outside a typical range given the patient's age or known vitals).
+
+        After any context block, the rest of the user message contains the OCR text of the report (and possibly the source images).
+
         At the top, provide a single-line title of at most 3 words (never more than 3 words), patient-friendly and concrete
         (do not include generic terms like 'Medical Report' or 'Summary'), with no asterisks (*).
         Then, after a blank line, write a concise summary in two parts for patients and caregivers:
@@ -57,6 +66,62 @@ enum GeminiPrompts {
         return """
         The user message is "TITLE: <one line>". Translate only that title into \(lang).
         Output a single line: the translated title, at most 3 words if the source has at most 3 words. No extra text.
+        """
+    }
+
+    static func dailyHealthSummaryPrompt(appLanguageCode: String) -> String {
+        let lang = AppLanguage.from(code: appLanguageCode).englishNameForAI
+        return """
+        You are a friendly health companion writing a short daily wellness summary for a patient.
+        The user message contains a section titled "PATIENT HEALTH CONTEXT" listing recent metrics
+        shared from the patient's Apple Health profile (age, vitals, weight, BMI, activity, sleep, etc.).
+
+        Write a brief, encouraging daily summary of how the patient is doing based ONLY on that data:
+        First, 1–2 short sentences giving the overall picture in warm, plain language.
+        After a blank line, 3–5 bullet points, each starting with "- ": highlight what looks typical,
+        anything worth keeping an eye on (phrased gently and tentatively, e.g. "slightly above the
+        usual range"), and one small, general wellness encouragement tied to the data (e.g. activity
+        or sleep patterns). Do not invent values that are not in the block.
+
+        Keep the whole summary around 80–140 words. Do not use asterisks (*).
+        Do not give prescriptive medical advice, dosages, diagnoses, or personalized treatment
+        recommendations. End with one short sentence reminding the reader this is general information
+        from their Apple Health data — not medical advice — and to consult a medical professional
+        with any concerns.
+
+        Write your entire reply for the user in \(lang). Do not use any other language for user-visible text.
+        """
+    }
+
+    static func dailyHealthLessonPrompt(appLanguageCode: String, dateKey: String) -> String {
+        let lang = AppLanguage.from(code: appLanguageCode).englishNameForAI
+        return """
+        Generate a daily general-health education lesson dated \(dateKey).
+        Pick ONE topic from broad general-health categories such as nutrition, sleep, exercise,
+        mental health, preventive care, common conditions, hydration, vaccination, hygiene,
+        chronic-disease basics, or first aid. Vary topics across days — avoid repeating the
+        same topic on consecutive days.
+
+        Do NOT give prescriptive advice, dosages, or personalized recommendations.
+        Inside the article, briefly remind the reader this is general education, not medical advice.
+
+        Return STRICT JSON only — no prose, no markdown code fences, no commentary. Exact shape:
+        {
+          "topic": "short title, max 6 words",
+          "article": "120-180 word patient-friendly paragraph, no asterisks, no markdown",
+          "questions": [
+            { "prompt": "...", "choices": ["A","B","C","D"], "correctIndex": 0, "explanation": "one short sentence" },
+            { "prompt": "...", "choices": ["A","B","C","D"], "correctIndex": 0, "explanation": "one short sentence" },
+            { "prompt": "...", "choices": ["A","B","C","D"], "correctIndex": 0, "explanation": "one short sentence" }
+          ]
+        }
+
+        Exactly 3 questions. Exactly 4 choices each. correctIndex is an integer 0..3.
+        Every question must be answerable directly from the article above.
+        Do not use asterisks (*) anywhere. Do not include any text before or after the JSON object.
+
+        Write the topic, article, all questions, choices, and explanations entirely in \(lang).
+        Do not use any other language for user-visible text.
         """
     }
 }

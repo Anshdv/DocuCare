@@ -18,6 +18,7 @@ struct ContentView: View {
 
     @EnvironmentObject private var session: SessionManager
     @Query(sort: \MedicalReport.createdAt, order: .reverse) private var allReports: [MedicalReport]
+    @Query private var allStreaks: [LessonStreak]
 
     /// Filters in memory so account email changes (Profile) immediately affect the list.
     private var reports: [MedicalReport] {
@@ -44,6 +45,10 @@ struct ContentView: View {
     // --- More Menu ---
     @State private var showingImportMenu = false
     @State private var showingProfile = false
+    @State private var showingDailyLesson = false
+    @State private var showingStreakSummary = false
+    @State private var showingCalendar = false
+    @State private var showingHealthSummary = false
 
     // --- SEARCH FEATURE ---
     @FocusState private var searchFieldFocused: Bool // For search bar dismissal
@@ -51,6 +56,28 @@ struct ContentView: View {
     @State private var searchText: String = ""
 
     private var lang: String { session.effectiveLanguageCode() }
+
+    /// Streak number to render on the toolbar flame badge. Returns 0 when streak is broken
+    /// (last completion was not today nor yesterday) or no row exists yet.
+    private var toolbarStreak: Int {
+        let owner = session.email.lowercased()
+        guard !owner.isEmpty,
+              let streak = allStreaks.first(where: { $0.ownerEmail == owner }) else {
+            return 0
+        }
+        return streak.displayStreak(
+            todayKey: DailyLessonService.todayKey(),
+            yesterdayKey: DailyLessonService.yesterdayKey()
+        )
+    }
+
+    /// `LessonStreak` row for the signed-in user, or `nil` if they haven't completed any
+    /// lessons yet. The streak overview renders zeros in that case.
+    private var currentUserStreak: LessonStreak? {
+        let owner = session.email.lowercased()
+        guard !owner.isEmpty else { return nil }
+        return allStreaks.first(where: { $0.ownerEmail == owner })
+    }
 
     private func formatReportDate(_ date: Date) -> String {
         let df = DateFormatter()
@@ -75,6 +102,9 @@ struct ContentView: View {
         let id = UUID()
         let question: String
         let answer: String
+        /// `true` when `answer` is a user-facing error string. Errored turns are kept in the
+        /// on-screen history but excluded from the conversation context sent to Gemini.
+        var isError: Bool = false
     }
     
     // --- Deletion Confirmation State ---
@@ -104,6 +134,7 @@ struct ContentView: View {
                         )
                         
                         scanButtonSection
+                        healthSummaryButtonSection
                         chatHistorySection
                         Spacer(minLength: 80) // Prevents last message from hiding behind chat bar
                     }
@@ -147,6 +178,22 @@ struct ContentView: View {
                     }
                     .disabled(isProcessing)
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingStreakSummary = true
+                    } label: {
+                        streakToolbarLabel
+                    }
+                    .accessibilityLabel(L10n.string(.dailyLessonNavTitle, languageCode: lang))
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingCalendar = true
+                    } label: {
+                        Image(systemName: "calendar")
+                    }
+                    .accessibilityLabel(L10n.string(.calendarNavTitle, languageCode: lang))
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         showingProfile = true
@@ -154,6 +201,9 @@ struct ContentView: View {
                         Image(systemName: "person.crop.circle")
                     }
                     .accessibilityLabel(L10n.string(.profileTitle, languageCode: lang))
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EmergencyCallButton(languageCode: lang, style: .compact)
                 }
             }
         }
@@ -167,6 +217,37 @@ struct ContentView: View {
                     ProfileView()
                 }
                 .environmentObject(session)
+            }
+            .sheet(isPresented: $showingDailyLesson) {
+                DailyLessonView()
+                    .environmentObject(session)
+            }
+            .sheet(isPresented: $showingStreakSummary) {
+                NavigationStack {
+                    StreakSummaryView(
+                        streak: currentUserStreak,
+                        onStartLesson: {
+                            showingStreakSummary = false
+                            // Wait for the streak sheet to finish dismissing before presenting
+                            // the lesson sheet, otherwise the second presentation is dropped.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                showingDailyLesson = true
+                            }
+                        },
+                        onDone: {
+                            showingStreakSummary = false
+                        }
+                    )
+                }
+                .environmentObject(session)
+            }
+            .sheet(isPresented: $showingCalendar) {
+                CalendarView()
+                    .environmentObject(session)
+            }
+            .sheet(isPresented: $showingHealthSummary) {
+                DailyHealthSummaryView()
+                    .environmentObject(session)
             }
             .applyImportConfirmationDialog(
                 languageCode: lang,
@@ -218,6 +299,20 @@ struct ContentView: View {
     // MARK: - Extracted UI Sections
 
     @ViewBuilder
+    private var streakToolbarLabel: some View {
+        let count = toolbarStreak
+        HStack(spacing: 4) {
+            Image(systemName: "flame.fill")
+                .foregroundStyle(count > 0 ? .orange : AppTheme.secondaryText)
+            if count > 0 {
+                Text("\(count)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    @ViewBuilder
     private var searchBar: some View {
         HStack {
             Image(systemName: "magnifyingglass")
@@ -257,10 +352,59 @@ struct ContentView: View {
         }
     }
 
+    /// "Today's health summary" — only offered when the user has connected Apple Health.
+    @ViewBuilder
+    private var healthSummaryButtonSection: some View {
+        if session.healthKitConnected && HealthKitService.shared.isAvailable {
+            HStack {
+                Spacer()
+                Button {
+                    showingHealthSummary = true
+                } label: {
+                    Label(
+                        L10n.string(.healthSummaryButton, languageCode: lang),
+                        systemImage: "heart.text.square.fill"
+                    )
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 18)
+                    .background(
+                        Capsule().fill(AppTheme.chipFill)
+                    )
+                    .overlay(
+                        Capsule().stroke(AppTheme.accent.opacity(0.35), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L10n.string(.healthSummaryNavTitle, languageCode: lang))
+                Spacer()
+            }
+        }
+    }
+
     @ViewBuilder
     private var chatHistorySection: some View {
         if !chatMessages.isEmpty {
             VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Spacer()
+                    Button {
+                        chatMessages.removeAll()
+                    } label: {
+                        Label(
+                            L10n.string(.chatClearConversation, languageCode: lang),
+                            systemImage: "arrow.counterclockwise"
+                        )
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(AppTheme.accentSecondary)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSendingPrompt)
+                    .accessibilityLabel(L10n.string(.chatClearConversation, languageCode: lang))
+                }
+
                 ForEach(chatMessages) { msg in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .top, spacing: 6) {
@@ -423,21 +567,70 @@ struct ContentView: View {
         isSendingPrompt = true
         inputIsFocused = false
         let currentQuestion = trimmedPrompt
+        let priorTurns = conversationTurnsForModel()
 
         Task {
             do {
                 let client = try GeminiClient()
                 let questionPrompt = GeminiPrompts.chatAssistantPrompt(appLanguageCode: lang)
 
-                let answer = try await client.AI_Response(text: currentQuestion, prompt: questionPrompt)
+                // Attach the HealthKit context only on the first turn of a conversation —
+                // the model already has it from the first user message on subsequent turns.
+                let isFirstTurn = priorTurns.isEmpty
+                let userText: String = isFirstTurn
+                    ? await composeUserMessage(body: currentQuestion)
+                    : currentQuestion
+
+                var turns = priorTurns
+                turns.append(GeminiClient.ChatTurn(role: .user, text: userText))
+
+                // Generous ceiling: gemini-2.5-flash spends internal "thinking" tokens out of
+                // this same budget, and longer conversations think more. 500 (the old default)
+                // randomly truncated visible answers mid-sentence.
+                let answer = try await client.AI_Response(
+                    turns: turns,
+                    prompt: questionPrompt,
+                    maxOutputTokens: 2048
+                )
 
                 guard !answer.isEmpty else { throw GeminiClient.ClientError.emptyOutput }
                 chatMessages.append(ChatMessage(question: currentQuestion, answer: answer))
             } catch {
-                chatMessages.append(ChatMessage(question: currentQuestion, answer: L10n.chatError(error, languageCode: lang)))
+                chatMessages.append(ChatMessage(
+                    question: currentQuestion,
+                    answer: L10n.chatError(error, languageCode: lang),
+                    isError: true
+                ))
             }
             isSendingPrompt = false
         }
+    }
+
+    /// Flattens the visible chat history into ordered Gemini `ChatTurn`s, skipping any
+    /// exchanges whose answer was an error so the model isn't confused by past failures.
+    private func conversationTurnsForModel() -> [GeminiClient.ChatTurn] {
+        var turns: [GeminiClient.ChatTurn] = []
+        for message in chatMessages where !message.isError {
+            turns.append(GeminiClient.ChatTurn(role: .user, text: message.question))
+            turns.append(GeminiClient.ChatTurn(role: .model, text: message.answer))
+        }
+        return turns
+    }
+
+    /// Prepends a `PATIENT HEALTH CONTEXT:` block (one-time HealthKit snapshot read) when the user
+    /// has connected DocuCare to Apple Health. Returns the original body unchanged otherwise.
+    private func composeUserMessage(body: String) async -> String {
+        guard session.healthKitConnected, HealthKitService.shared.isAvailable else { return body }
+        let snapshot = await HealthKitService.shared.fetchSnapshot()
+        guard let block = snapshot.aiContextBlock() else { return body }
+        return """
+        PATIENT HEALTH CONTEXT (from Apple Health, shared by the patient):
+        \(block)
+
+        ---
+
+        \(body)
+        """
     }
 
     // MARK: - Scan Actions
@@ -490,8 +683,9 @@ struct ContentView: View {
 
                 // Always send redacted images to the AI (full OCR text—no client-side truncation; brevity is enforced in the prompt)
                 let imagesToSend: [UIImage]? = redactedImages
+                let textWithHealthContext = await composeUserMessage(body: text)
                 let aiOutput = try await client.AI_Response(
-                    text: text,
+                    text: textWithHealthContext,
                     prompt: summarizePrompt,
                     images: imagesToSend,
                     maxOutputTokens: GeminiClient.summarizeOutputTokenCeiling

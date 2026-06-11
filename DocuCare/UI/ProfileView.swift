@@ -16,6 +16,15 @@ struct ProfileView: View {
     @State private var alertTitle: String?
     @State private var alertMessage: String?
 
+    @State private var isRequestingHealthAuth = false
+    @State private var showingHealthDisconnectConfirm = false
+    @State private var showingHealthOpenSettingsButton = false
+
+    @State private var healthSnapshot: HealthSnapshot?
+    @State private var healthSnapshotFetchedAt: Date?
+    @State private var isLoadingHealthSnapshot = false
+    @State private var healthSnapshotTask: Task<Void, Never>?
+
     private var lang: String { session.effectiveLanguageCode() }
 
     var body: some View {
@@ -80,6 +89,30 @@ struct ProfileView: View {
                 }
 
                 Section {
+                    Picker(L10n.string(.fontSize, languageCode: lang), selection: Binding(
+                        get: { session.preferredFontSize },
+                        set: { session.setPreferredFontSize($0) }
+                    )) {
+                        ForEach(AppFontSize.allCases) { size in
+                            Text(L10n.string(size.localizationKey, languageCode: lang))
+                                .tag(size)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(AppTheme.chipFill)
+
+                    Text(L10n.string(.fontSizePreview, languageCode: lang))
+                        .font(.body)
+                        .dynamicTypeSize(session.preferredFontSize.dynamicTypeSize)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .listRowBackground(AppTheme.chipFill)
+                } header: {
+                    Text(L10n.string(.fontSize, languageCode: lang))
+                        .foregroundStyle(AppTheme.softText)
+                }
+
+                Section {
                     SecureField(
                         "",
                         text: $currentPassword,
@@ -118,6 +151,28 @@ struct ProfileView: View {
                 } header: {
                     Text(L10n.string(.profileSecuritySection, languageCode: lang))
                         .foregroundStyle(AppTheme.softText)
+                }
+
+                Section {
+                    appleHealthSectionContent
+                } header: {
+                    Text(L10n.string(.appleHealthSection, languageCode: lang))
+                        .foregroundStyle(AppTheme.softText)
+                } footer: {
+                    appleHealthSectionFooter
+                }
+
+                if session.healthKitConnected && HealthKitService.shared.isAvailable {
+                    Section {
+                        appleHealthDataSectionContent
+                    } header: {
+                        appleHealthDataSectionHeader
+                    } footer: {
+                        if let snapshot = healthSnapshot, !snapshot.isEmpty {
+                            Text(L10n.string(.appleHealthDataFooter, languageCode: lang))
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                    }
                 }
 
                 Section {
@@ -186,13 +241,234 @@ struct ProfileView: View {
             get: { alertTitle != nil },
             set: { if !$0 { alertTitle = nil; alertMessage = nil } }
         )) {
+            if showingHealthOpenSettingsButton,
+               let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                Button(L10n.string(.appleHealthOpenSettings, languageCode: lang)) {
+                    UIApplication.shared.open(settingsURL)
+                    alertTitle = nil
+                    alertMessage = nil
+                    showingHealthOpenSettingsButton = false
+                }
+            }
             Button(L10n.string(.ok, languageCode: lang)) {
                 alertTitle = nil
                 alertMessage = nil
+                showingHealthOpenSettingsButton = false
             }
         } message: {
             Text(alertMessage ?? "")
         }
+        .alert(
+            L10n.string(.appleHealthDisconnectTitle, languageCode: lang),
+            isPresented: $showingHealthDisconnectConfirm
+        ) {
+            Button(L10n.string(.appleHealthDisconnectConfirm, languageCode: lang), role: .destructive) {
+                session.setHealthKitConnected(false)
+                healthSnapshotTask?.cancel()
+                healthSnapshot = nil
+                healthSnapshotFetchedAt = nil
+            }
+            Button(L10n.string(.cancel, languageCode: lang), role: .cancel) {}
+        } message: {
+            Text(L10n.string(.appleHealthDisconnectMessage, languageCode: lang))
+        }
+        .onAppear {
+            if session.healthKitConnected, healthSnapshot == nil {
+                refreshHealthSnapshot()
+            }
+        }
+        .onChange(of: session.healthKitConnected) { _, isConnected in
+            if isConnected {
+                refreshHealthSnapshot()
+            } else {
+                healthSnapshotTask?.cancel()
+                healthSnapshot = nil
+                healthSnapshotFetchedAt = nil
+            }
+        }
+    }
+
+    // MARK: - Apple Health section
+
+    @ViewBuilder
+    private var appleHealthSectionContent: some View {
+        if !HealthKitService.shared.isAvailable {
+            Text(L10n.string(.appleHealthUnavailable, languageCode: lang))
+                .font(.subheadline)
+                .foregroundStyle(AppTheme.secondaryText)
+                .listRowBackground(AppTheme.chipFill)
+        } else {
+            Toggle(isOn: healthKitBinding) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.string(.appleHealthToggle, languageCode: lang))
+                        .foregroundStyle(AppTheme.softText)
+                    if isRequestingHealthAuth {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+            }
+            .disabled(isRequestingHealthAuth)
+            .listRowBackground(AppTheme.chipFill)
+        }
+    }
+
+    @ViewBuilder
+    private var appleHealthSectionFooter: some View {
+        if HealthKitService.shared.isAvailable {
+            Text(session.healthKitConnected
+                 ? L10n.string(.appleHealthConnectedFooter, languageCode: lang)
+                 : L10n.string(.appleHealthDescription, languageCode: lang))
+                .foregroundStyle(AppTheme.secondaryText)
+        } else {
+            EmptyView()
+        }
+    }
+
+    private var healthKitBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { session.healthKitConnected },
+            set: { newValue in
+                if newValue {
+                    requestHealthAuthorization()
+                } else {
+                    showingHealthDisconnectConfirm = true
+                }
+            }
+        )
+    }
+
+    private func requestHealthAuthorization() {
+        guard !isRequestingHealthAuth else { return }
+        isRequestingHealthAuth = true
+        HealthKitService.shared.requestAuthorization { result in
+            isRequestingHealthAuth = false
+            switch result {
+            case .success:
+                // Apple does not expose per-type read decisions; treat a completed sheet as a
+                // successful opt-in. If no data ends up readable, the data section below makes
+                // that explicit with "Not shared" rows.
+                session.setHealthKitConnected(true)
+                refreshHealthSnapshot()
+            case .failure:
+                showingHealthOpenSettingsButton = true
+                alertTitle = L10n.string(.appleHealthAuthFailedTitle, languageCode: lang)
+                alertMessage = L10n.string(.appleHealthAuthFailedMessage, languageCode: lang)
+            }
+        }
+    }
+
+    // MARK: - Apple Health data display
+
+    @ViewBuilder
+    private var appleHealthDataSectionHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(L10n.string(.appleHealthDataSectionTitle, languageCode: lang))
+                .foregroundStyle(AppTheme.softText)
+            Spacer()
+            Button {
+                refreshHealthSnapshot()
+            } label: {
+                Label(L10n.string(.appleHealthRefresh, languageCode: lang), systemImage: "arrow.clockwise")
+                    .labelStyle(.titleAndIcon)
+                    .font(.footnote.weight(.semibold))
+            }
+            .buttonStyle(.borderless)
+            .textCase(nil)
+            .disabled(isLoadingHealthSnapshot)
+            .opacity(isLoadingHealthSnapshot ? 0.4 : 1)
+        }
+    }
+
+    @ViewBuilder
+    private var appleHealthDataSectionContent: some View {
+        if isLoadingHealthSnapshot && healthSnapshot == nil {
+            HStack(spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                Text(L10n.string(.appleHealthDataLoading, languageCode: lang))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+            .listRowBackground(AppTheme.chipFill)
+        } else if let snapshot = healthSnapshot {
+            if snapshot.isEmpty {
+                Text(L10n.string(.appleHealthDataEmpty, languageCode: lang))
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .listRowBackground(AppTheme.chipFill)
+            } else {
+                if let fetchedAt = healthSnapshotFetchedAt {
+                    Text(String(
+                        format: L10n.string(.appleHealthLastUpdatedFormat, languageCode: lang),
+                        relativeDate(fetchedAt)
+                    ))
+                    .font(.footnote)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .listRowBackground(AppTheme.chipFill)
+                }
+                ForEach(snapshot.displayRows(languageCode: lang)) { row in
+                    appleHealthDataRow(row)
+                        .listRowBackground(AppTheme.chipFill)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func appleHealthDataRow(_ row: HealthDisplayRow) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.string(row.labelKey, languageCode: lang))
+                    .foregroundStyle(AppTheme.softText)
+                if let date = row.sampleDate {
+                    Text(String(
+                        format: L10n.string(.appleHealthLastUpdatedFormat, languageCode: lang),
+                        sampleDateText(date)
+                    ))
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+            Spacer()
+            if let value = row.value, !value.isEmpty {
+                Text(value)
+                    .monospacedDigit()
+                    .foregroundStyle(AppTheme.softText)
+            } else {
+                Text(L10n.string(.appleHealthNotShared, languageCode: lang))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func refreshHealthSnapshot() {
+        guard session.healthKitConnected, HealthKitService.shared.isAvailable else { return }
+        healthSnapshotTask?.cancel()
+        isLoadingHealthSnapshot = true
+        healthSnapshotTask = Task { @MainActor in
+            let snapshot = await HealthKitService.shared.fetchSnapshot()
+            if Task.isCancelled { return }
+            self.healthSnapshot = snapshot
+            self.healthSnapshotFetchedAt = Date()
+            self.isLoadingHealthSnapshot = false
+        }
+    }
+
+    private func relativeDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: AppLanguage.localeIdentifier(from: lang))
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func sampleDateText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: AppLanguage.localeIdentifier(from: lang))
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 
     private func applyEmailChange() {
@@ -219,6 +495,16 @@ struct ProfileView: View {
             return
         }
         migrateReportOwnership(from: oldLower, to: session.email.lowercased())
+        DailyLessonService.migrateOwnership(
+            from: oldLower,
+            to: session.email.lowercased(),
+            in: modelContext
+        )
+        CalendarService.migrateOwnership(
+            from: oldLower,
+            to: session.email.lowercased(),
+            in: modelContext
+        )
         emailChangePassword = ""
         newEmail = session.email
         alertTitle = L10n.string(.profileSuccessTitle, languageCode: lang)

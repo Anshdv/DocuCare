@@ -56,7 +56,7 @@ struct ReportDetailView: View {
                                 prompt: Text(L10n.string(.reportTitlePlaceholder, languageCode: lang))
                                     .foregroundStyle(AppTheme.secondaryText.opacity(0.9))
                             )
-                            .id("\(report.id.uuidString)-\(report.title)-\(report.contentLanguageCode)-\(report.summary?.count ?? 0)-\(session.localizationRevision)")
+                            .id("\(report.id.uuidString)-\(report.contentLanguageCode)-\(report.summary?.count ?? 0)-\(session.localizationRevision)")
                             .font(.title)
                             .bold()
                             .foregroundStyle(AppTheme.softText)

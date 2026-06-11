@@ -6,15 +6,28 @@ struct UserRecord: Codable {
     var hasConsented: Bool
     /// `AppLanguage.rawValue`
     var preferredLanguageCode: String
+    /// `AppFontSize.rawValue`
+    var preferredFontSizeRaw: String
+    /// User explicitly opted in to having DocuCare read from Apple Health.
+    /// Defaults to `false`; toggled only after the system Health auth sheet completes.
+    var healthKitConnected: Bool
 
-    init(password: String, hasConsented: Bool, preferredLanguageCode: String = AppLanguage.english.rawValue) {
+    init(
+        password: String,
+        hasConsented: Bool,
+        preferredLanguageCode: String = AppLanguage.english.rawValue,
+        preferredFontSizeRaw: String = AppFontSize.default.rawValue,
+        healthKitConnected: Bool = false
+    ) {
         self.password = password
         self.hasConsented = hasConsented
         self.preferredLanguageCode = preferredLanguageCode
+        self.preferredFontSizeRaw = preferredFontSizeRaw
+        self.healthKitConnected = healthKitConnected
     }
 
     enum CodingKeys: String, CodingKey {
-        case password, hasConsented, preferredLanguageCode
+        case password, hasConsented, preferredLanguageCode, preferredFontSizeRaw, healthKitConnected
     }
 
     init(from decoder: Decoder) throws {
@@ -22,6 +35,8 @@ struct UserRecord: Codable {
         password = try c.decode(String.self, forKey: .password)
         hasConsented = try c.decode(Bool.self, forKey: .hasConsented)
         preferredLanguageCode = try c.decodeIfPresent(String.self, forKey: .preferredLanguageCode) ?? AppLanguage.english.rawValue
+        preferredFontSizeRaw = try c.decodeIfPresent(String.self, forKey: .preferredFontSizeRaw) ?? AppFontSize.default.rawValue
+        healthKitConnected = try c.decodeIfPresent(Bool.self, forKey: .healthKitConnected) ?? false
     }
 }
 
@@ -33,6 +48,11 @@ final class SessionManager: ObservableObject {
     @Published var hasConsented: Bool = false
     /// Mirrors the signed-in user's `preferredLanguageCode`, or the last known UI language when logged out.
     @Published var preferredLanguageCode: String
+    /// Mirrors the signed-in user's `preferredFontSize`, or the last known choice when logged out.
+    @Published var preferredFontSize: AppFontSize
+    /// Whether the signed-in user has connected DocuCare to Apple Health.
+    /// Drives whether health context is attached to AI requests.
+    @Published var healthKitConnected: Bool = false
 
     /// Bumped whenever UI language strings should refresh (e.g. TextField prompts).
     @Published private(set) var localizationRevision: UInt = 0
@@ -41,6 +61,7 @@ final class SessionManager: ObservableObject {
 
     private let usersKey = "users"
     private let lastPreferredLanguageKey = "lastPreferredLanguageCode"
+    private let lastPreferredFontSizeKey = "lastPreferredFontSize"
 
     private var users: [String: UserRecord] {
         get {
@@ -72,12 +93,18 @@ final class SessionManager: ObservableObject {
         self.email = UserDefaults.standard.string(forKey: "lastUser") ?? ""
         let storedLang = UserDefaults.standard.string(forKey: lastPreferredLanguageKey)
         self.preferredLanguageCode = storedLang ?? AppLanguage.bestMatchForSystem().rawValue
+        let storedFontSize = UserDefaults.standard.string(forKey: lastPreferredFontSizeKey)
+        self.preferredFontSize = AppFontSize.from(rawValue: storedFontSize)
         if isLoggedIn {
             let lowercased = self.email.lowercased()
             self.hasConsented = users[lowercased]?.hasConsented ?? false
             if let code = users[lowercased]?.preferredLanguageCode {
                 self.preferredLanguageCode = code
             }
+            if let fontRaw = users[lowercased]?.preferredFontSizeRaw {
+                self.preferredFontSize = AppFontSize.from(rawValue: fontRaw)
+            }
+            self.healthKitConnected = users[lowercased]?.healthKitConnected ?? false
         }
     }
 
@@ -100,8 +127,18 @@ final class SessionManager: ObservableObject {
         UserDefaults.standard.set(code, forKey: lastPreferredLanguageKey)
     }
 
-    /// Registration; `preferredLanguageCode` is stored when the account is created.
-    func signUp(email: String, password: String, preferredLanguageCode: String) -> SignUpResult {
+    private func persistFontSize(_ size: AppFontSize) {
+        preferredFontSize = size
+        UserDefaults.standard.set(size.rawValue, forKey: lastPreferredFontSizeKey)
+    }
+
+    /// Registration; `preferredLanguageCode` and `preferredFontSize` are stored when the account is created.
+    func signUp(
+        email: String,
+        password: String,
+        preferredLanguageCode: String,
+        preferredFontSize: AppFontSize = .default
+    ) -> SignUpResult {
         var users = self.users
         let lowercased = email.lowercased()
         if users[lowercased] != nil {
@@ -110,7 +147,8 @@ final class SessionManager: ObservableObject {
         users[lowercased] = UserRecord(
             password: password,
             hasConsented: false,
-            preferredLanguageCode: preferredLanguageCode
+            preferredLanguageCode: preferredLanguageCode,
+            preferredFontSizeRaw: preferredFontSize.rawValue
         )
         self.users = users
         return .success
@@ -124,7 +162,9 @@ final class SessionManager: ObservableObject {
         self.email = email
         self.isLoggedIn = true
         self.hasConsented = user.hasConsented
+        self.healthKitConnected = user.healthKitConnected
         persistLanguageCode(user.preferredLanguageCode)
+        persistFontSize(AppFontSize.from(rawValue: user.preferredFontSizeRaw))
         UserDefaults.standard.set(lowercased, forKey: "lastUser")
         return true
     }
@@ -133,6 +173,7 @@ final class SessionManager: ObservableObject {
         self.email = ""
         self.isLoggedIn = false
         self.hasConsented = false
+        self.healthKitConnected = false
         UserDefaults.standard.removeObject(forKey: "lastUser")
     }
 
@@ -189,6 +230,39 @@ final class SessionManager: ObservableObject {
         persistLanguageCode(code)
     }
 
+    /// Update Apple Health connection flag for the current user.
+    /// `true` means DocuCare will attach a health snapshot to AI requests when possible.
+    func setHealthKitConnected(_ connected: Bool) {
+        let key = email.lowercased()
+        guard !key.isEmpty else {
+            self.healthKitConnected = connected
+            return
+        }
+        var users = self.users
+        if var user = users[key] {
+            user.healthKitConnected = connected
+            users[key] = user
+            self.users = users
+        }
+        self.healthKitConnected = connected
+    }
+
+    /// Update font size for the current user (and UI).
+    func setPreferredFontSize(_ size: AppFontSize) {
+        let key = email.lowercased()
+        guard !key.isEmpty else {
+            persistFontSize(size)
+            return
+        }
+        var users = self.users
+        if var user = users[key] {
+            user.preferredFontSizeRaw = size.rawValue
+            users[key] = user
+            self.users = users
+        }
+        persistFontSize(size)
+    }
+
     func recordConsent() {
         recordConsent(for: self.email)
     }
@@ -221,8 +295,12 @@ final class SessionManager: ObservableObject {
                 self?.isLoggedIn = true
                 let lowercased = lastUser.lowercased()
                 self?.hasConsented = self?.users[lowercased]?.hasConsented ?? false
+                self?.healthKitConnected = self?.users[lowercased]?.healthKitConnected ?? false
                 if let code = self?.users[lowercased]?.preferredLanguageCode {
                     self?.persistLanguageCode(code)
+                }
+                if let fontRaw = self?.users[lowercased]?.preferredFontSizeRaw {
+                    self?.persistFontSize(AppFontSize.from(rawValue: fontRaw))
                 }
                 completion(true)
             } else {

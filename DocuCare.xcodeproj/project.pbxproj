@@ -410,6 +410,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DocuCare/DocuCare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGG3M7MUYN;
@@ -418,6 +419,8 @@
 				INFOPLIST_FILE = DocuCare/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "$(PRODUCT_NAME) use the camera to scan documents";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "$(PRODUCT_NAME) uses FaceID to unlock the app";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "DocuCare uses your Apple Health data to give the AI a holistic view of your health so it can analyze medical reports and answer questions more accurately.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "DocuCare does not write to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -440,14 +443,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = DocuCare/DocuCare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGG3M7MUYN;
 				ENABLE_PREVIEWS = YES;
+				GEMINI_API_KEY = AIzaSyAHYpsZFRmDhIb88bq3TmL56xnxugXhwnU;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DocuCare/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "$(PRODUCT_NAME) use the camera to scan documents";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "$(PRODUCT_NAME) uses FaceID to unlock the app";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "DocuCare uses your Apple Health data to give the AI a holistic view of your health so it can analyze medical reports and answer questions more accurately.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "DocuCare does not write to Apple Health.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

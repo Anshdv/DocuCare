@@ -130,24 +130,66 @@ struct GeminiClient {
         self.model = model
     }
 
+    // MARK: - Conversation memory
+
+    /// One turn in a multi-turn chat. `role` must alternate user → model → user → model …
+    /// starting with `.user`; the final turn passed to `AI_Response(turns:…)` must be the
+    /// new user message.
+    struct ChatTurn {
+        enum Role { case user, model }
+        let role: Role
+        let text: String
+
+        init(role: Role, text: String) {
+            self.role = role
+            self.text = text
+        }
+
+        fileprivate var apiRole: String {
+            switch role {
+            case .user: return "user"
+            case .model: return "model"
+            }
+        }
+    }
+
     // MARK: - Public API
     /// If `images` is provided, all images will be sent alongside the text.
     /// `prompt` should already include any output-language instructions (see `GeminiPrompts`).
     func AI_Response(text: String, prompt: String, images: [UIImage]? = nil, maxOutputTokens: Int = 500) async throws -> String {
-        let systemPrompt = prompt
+        try await AI_Response(
+            turns: [ChatTurn(role: .user, text: text)],
+            prompt: prompt,
+            images: images,
+            maxOutputTokens: maxOutputTokens
+        )
+    }
 
-        let system = Content(role: "system", parts: [Part(text: systemPrompt)])
-        var userParts: [Part] = [Part(text: text)]
-        if let images = images {
-            for image in images {
-                userParts.append(Part(image: image))
-            }
+    /// Multi-turn variant — pass the full prior conversation followed by the new user turn so
+    /// the model has memory of earlier questions and answers. Images are attached to the
+    /// **last** user turn only.
+    func AI_Response(turns: [ChatTurn], prompt: String, images: [UIImage]? = nil, maxOutputTokens: Int = 500) async throws -> String {
+        guard let lastTurn = turns.last, lastTurn.role == .user else {
+            throw ClientError.emptyOutput
         }
-        let user = Content(role: "user", parts: userParts)
+
+        let systemPrompt = prompt
+        let system = Content(role: "system", parts: [Part(text: systemPrompt)])
+
+        var contents: [Content] = []
+        for (index, turn) in turns.enumerated() {
+            var parts: [Part] = [Part(text: turn.text)]
+            if index == turns.count - 1, let images = images {
+                for image in images {
+                    parts.append(Part(image: image))
+                }
+            }
+            contents.append(Content(role: turn.apiRole, parts: parts))
+        }
 
         let body = RequestBody(
             systemInstruction: system,
-            contents: [user],
+            contents: contents,
             generationConfig: GenerationConfig(temperature: 0.2, maxOutputTokens: maxOutputTokens)
         )
 

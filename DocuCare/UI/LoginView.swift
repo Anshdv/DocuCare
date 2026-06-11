@@ -12,10 +12,12 @@ struct LoginView: View {
     @State private var signUpEmail: String = ""
     @State private var signUpPassword: String = ""
     @State private var signUpLanguageCode: String = AppLanguage.bestMatchForSystem().rawValue
+    @State private var signUpFontSize: AppFontSize = .default
     @State private var signUpError: String?
     @FocusState private var signUpFocusField: Field?
     @State private var pendingConsentEmail: String?
     @State private var pendingSignUpLanguageCode: String = AppLanguage.english.rawValue
+    @State private var pendingSignUpFontSize: AppFontSize = .default
 
     // Navigation
     @State private var shouldShowConsentAfterSignUp = false
@@ -107,13 +109,18 @@ struct LoginView: View {
                                     signUpPassword = ""
                                     signUpError = nil
                                     signUpLanguageCode = AppLanguage.bestMatchForSystem().rawValue
+                                    signUpFontSize = .default
                                 } label: {
                                     Text(L10n.string(.signUpPrompt, languageCode: lang))
                                         .font(.callout.weight(.semibold))
                                         .foregroundStyle(AppTheme.accentSecondary)
                                 }
                                 .padding(.top, 4)
-                                .padding(.bottom, 10)
+
+                                EmergencyCallButton(languageCode: lang, style: .prominent)
+                                    .padding(.horizontal, 26)
+                                    .padding(.top, 6)
+                                    .padding(.bottom, 14)
                             }
                             .frame(maxWidth: .infinity)
                             .appCardStyle()
@@ -156,7 +163,13 @@ struct LoginView: View {
                                 return
                             }
                             let lc = pendingSignUpLanguageCode
-                            switch session.signUp(email: email, password: signUpPassword, preferredLanguageCode: lc) {
+                            let fs = pendingSignUpFontSize
+                            switch session.signUp(
+                                email: email,
+                                password: signUpPassword,
+                                preferredLanguageCode: lc,
+                                preferredFontSize: fs
+                            ) {
                             case .success:
                                 session.recordConsent(for: email)
                                 self.email = email
@@ -207,6 +220,32 @@ struct LoginView: View {
                         .labelsHidden()
                         .accessibilityLabel(L10n.string(.language, languageCode: signUpLanguageCode))
                         .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 32)
+
+                    VStack(alignment: .center, spacing: 10) {
+                        Text(L10n.string(.chooseFontSize, languageCode: signUpLanguageCode))
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondaryText)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                        Picker(L10n.string(.fontSize, languageCode: signUpLanguageCode), selection: $signUpFontSize) {
+                            ForEach(AppFontSize.allCases) { size in
+                                Text(L10n.string(size.localizationKey, languageCode: signUpLanguageCode))
+                                    .tag(size)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .accessibilityLabel(L10n.string(.fontSize, languageCode: signUpLanguageCode))
+                        .frame(maxWidth: .infinity)
+
+                        Text(L10n.string(.fontSizePreview, languageCode: signUpLanguageCode))
+                            .font(.system(size: signUpFontSize.previewPointSize))
+                            .foregroundStyle(AppTheme.softText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 2)
+                            .animation(.easeOut(duration: 0.15), value: signUpFontSize)
                     }
                     .padding(.horizontal, 32)
 
@@ -291,6 +330,7 @@ struct LoginView: View {
 
         pendingConsentEmail = trimmedEmail.lowercased()
         pendingSignUpLanguageCode = signUpLanguageCode
+        pendingSignUpFontSize = signUpFontSize
         shouldShowConsentAfterSignUp = true
         showSignUp = false
     }
