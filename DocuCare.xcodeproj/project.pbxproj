@@ -24,6 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5A3E3CC52E4E8000004DAC68 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		5A3E3C752E4E68DA004DAC68 /* DocuCare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DocuCare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A3E3C842E4E68DF004DAC68 /* DocuCareTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocuCareTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A3E3C8E2E4E68DF004DAC68 /* DocuCareUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DocuCareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,9 +86,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5A3E3CC62E4E8000004DAC68 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				5A3E3CC52E4E8000004DAC68 /* Secrets.xcconfig */,
+			);
+			path = DocuCare/Config;
+			sourceTree = "<group>";
+		};
 		5A3E3C6C2E4E68DA004DAC68 = {
 			isa = PBXGroup;
 			children = (
+				5A3E3CC62E4E8000004DAC68 /* Config */,
 				5A3E3C772E4E68DA004DAC68 /* DocuCare */,
 				5A3E3C872E4E68DF004DAC68 /* DocuCareTests */,
 				5A3E3C912E4E68DF004DAC68 /* DocuCareUITests */,
@@ -284,6 +294,7 @@
 /* Begin XCBuildConfiguration section */
 		5A3E3C962E4E68DF004DAC68 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5A3E3CC52E4E8000004DAC68 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -349,6 +360,7 @@
 		};
 		5A3E3C972E4E68DF004DAC68 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5A3E3CC52E4E8000004DAC68 /* Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -448,7 +460,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = VGG3M7MUYN;
 				ENABLE_PREVIEWS = YES;
-				GEMINI_API_KEY = AIzaSyAHYpsZFRmDhIb88bq3TmL56xnxugXhwnU;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DocuCare/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "$(PRODUCT_NAME) use the camera to scan documents";
